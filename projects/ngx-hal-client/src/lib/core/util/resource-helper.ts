@@ -3,10 +3,10 @@ import * as url from 'url';
 import { BaseResource } from '../model/base-resource';
 import { SubTypeBuilder } from '../model/interface/subtype-builder';
 import { Resource } from '../model/resource';
-import { ResourceArray } from '../model/resource-array';
-import { EmbeddedResource, instanceOfEmbeddedResource } from '../model/embedded-resource';
 import { Utils } from './utils';
 import { HalOptions, HalParam, Include, LinkParams, ResourceOptions } from '../model/common';
+import { ResourceArray } from '../model/resource-array';
+import { isEmbeddedResource, isResource } from '../model/defenition';
 
 export class ResourceHelper {
 
@@ -54,7 +54,7 @@ export class ResourceHelper {
     static params(httpParams: HttpParams, params?: HalParam[]) {
         if (params) {
             for (const param of params) {
-                const paramValue = param.value instanceof Resource
+                const paramValue = isResource(param.value)
                     ? param.value.getSelfLinkHref()
                     : param.value.toString();
                 httpParams = httpParams.append(param.key, paramValue);
@@ -123,12 +123,6 @@ export class ResourceHelper {
         return result as object;
     }
 
-    static createEmptyResult<T extends Resource>(embedded: string): ResourceArray<T> {
-        const resourceArray: ResourceArray<T> = new ResourceArray<T>();
-        resourceArray._embedded = embedded;
-        return resourceArray;
-    }
-
     static getClassName(obj: any): string {
         const funcNameRegex = /function (.+?)\(/;
         const results = (funcNameRegex).exec(obj.constructor.toString());
@@ -193,12 +187,14 @@ export class ResourceHelper {
         for (const key of Object.keys(payload)) {
             if (payload[key] instanceof Array) {
                 for (let i = 0; i < payload[key].length; i++) {
-                    if (instanceOfEmbeddedResource(payload[key][i])) {
-                        payload[key][i] = ResourceHelper.createResource(new EmbeddedResource(), payload[key][i]);
+                    if (isEmbeddedResource(payload[key][i])) {
+                        // TODO: check that it's work
+                        payload[key][i] = ResourceHelper.createResource(payload[key][i], payload[key][i]);
                     }
                 }
-            } else if (instanceOfEmbeddedResource(payload[key])) {
-                payload[key] = ResourceHelper.createResource(new EmbeddedResource(), payload[key]);
+            } else if (isEmbeddedResource(payload[key])) {
+                // TODO: check that it's work
+                payload[key] = ResourceHelper.createResource(payload[key], payload[key]);
             }
         }
 

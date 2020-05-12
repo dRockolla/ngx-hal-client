@@ -28,6 +28,10 @@ export class ResourceArray<T extends Resource> implements ArrayInterface<T> {
 
     public result: T[] = [];
 
+    constructor(embedded: string) {
+        this._embedded = embedded;
+    }
+
     push = (el: T) => {
         this.result.push(el);
     };
@@ -37,7 +41,7 @@ export class ResourceArray<T extends Resource> implements ArrayInterface<T> {
     };
 
     private init = (type: { new(): T }, response: any, sortInfo: Sort[]): ResourceArray<T> => {
-        const result: ResourceArray<T> = ResourceHelper.createEmptyResult<T>(this._embedded);
+        const result: ResourceArray<T> = new ResourceArray<T>(this._embedded);
         result.sortInfo = sortInfo;
         ResourceHelper.instantiateResourceCollection(type, response, result);
         return result;
