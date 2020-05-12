@@ -31,7 +31,7 @@ export abstract class BaseResource {
     public _links: Links;
 
     // Get related resource
-    public getRelation<T extends Resource>(type: { new(): T },
+    public getRelation<T extends Resource>(type: new() => T,
                                            relation: string,
                                            builder?: SubTypeBuilder,
                                            expireMs: number = CacheHelper.defaultExpire,
@@ -66,7 +66,7 @@ export abstract class BaseResource {
         }
     }
 
-    public getProjection<T extends Resource>(type: { new(): T },
+    public getProjection<T extends Resource>(type: new() => T,
                                              resource: string,
                                              id: string,
                                              projectionName: string,
@@ -91,7 +91,7 @@ export abstract class BaseResource {
     }
 
     // Get collection of related resources
-    public getRelationArray<T extends Resource>(type: { new(): T },
+    public getRelationArray<T extends Resource>(type: new() => T,
                                                 relation: string,
                                                 options?: HalOptions,
                                                 embedded?: string,
@@ -126,7 +126,7 @@ export abstract class BaseResource {
         }
     }
 
-    public getProjectionArray<T extends Resource>(type: { new(): T },
+    public getProjectionArray<T extends Resource>(type: new() => T,
                                                   resource: string,
                                                   projectionName: string,
                                                   expireMs: number = CacheHelper.defaultExpire,

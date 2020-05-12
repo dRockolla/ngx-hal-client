@@ -141,7 +141,7 @@ export class ResourceHelper {
         return classNames;
     }
 
-    static instantiateResourceCollection<T extends Resource>(type: { new(): T }, payload: any,
+    static instantiateResourceCollection<T extends Resource>(type: new() => T, payload: any,
                                                              result: ResourceArray<T>, builder?: SubTypeBuilder): ResourceArray<T> {
         if (payload[result._embedded]) {
             for (const embeddedClassName of Object.keys(payload[result._embedded])) {
@@ -175,7 +175,7 @@ export class ResourceHelper {
             const keys = builder.subtypes.keys();
             Array.from(keys).forEach((subtypeKey: string) => {
                 if (embeddedClassName.toLowerCase().startsWith(subtypeKey.toLowerCase())) {
-                    const subtype: { new(): any } = builder.subtypes.get(subtypeKey);
+                    const subtype: new() => any = builder.subtypes.get(subtypeKey);
                     instance = new subtype();
                 }
             });

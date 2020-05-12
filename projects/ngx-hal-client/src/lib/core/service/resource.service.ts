@@ -24,7 +24,7 @@ export class ResourceService {
         return ResourceHelper.getURL();
     }
 
-    public getAll<T extends Resource>(type: { new(): T },
+    public getAll<T extends Resource>(type: new() => T,
                                       resource: string,
                                       embedded: string,
                                       options?: HalOptions,
@@ -41,7 +41,7 @@ export class ResourceService {
             catchError(error => observableThrowError(error)));
     }
 
-    public get<T extends Resource>(type: { new(): T }, resource: string, id: any, params?: HalParam[]): Observable<T> {
+    public get<T extends Resource>(type: new() => T, resource: string, id: any, params?: HalParam[]): Observable<T> {
         const uri = this.getResourceUrl(resource).concat('/', id);
         const result: T = new type();
         const httpParams = ResourceHelper.params(new HttpParams(), params);
@@ -52,7 +52,7 @@ export class ResourceService {
             catchError(error => observableThrowError(error)));
     }
 
-    public getBySelfLink<T extends Resource>(type: { new(): T }, resourceLink: string): Observable<T> {
+    public getBySelfLink<T extends Resource>(type: new() => T, resourceLink: string): Observable<T> {
         const result: T = new type();
 
         this.setUrlsResource(result);
@@ -61,7 +61,7 @@ export class ResourceService {
             catchError(error => observableThrowError(error)));
     }
 
-    public search<T extends Resource>(type: { new(): T }, query: string, resource: string, embedded: string, options?: HalOptions,
+    public search<T extends Resource>(type: new() => T, query: string, resource: string, embedded: string, options?: HalOptions,
                                       subType?: SubTypeBuilder): Observable<ResourceArray<T>> {
         const uri = this.getResourceUrl(resource).concat('/search/', query);
         const httpParams = ResourceHelper.optionParams(new HttpParams({encoder: new CustomEncoder()}), options);
@@ -73,7 +73,7 @@ export class ResourceService {
             catchError(error => observableThrowError(error)));
     }
 
-    public searchSingle<T extends Resource>(type: { new(): T }, query: string, resource: string, options?: HalOptions): Observable<T> {
+    public searchSingle<T extends Resource>(type: new() => T, query: string, resource: string, options?: HalOptions): Observable<T> {
         const uri = this.getResourceUrl(resource).concat('/search/', query);
         const httpParams = ResourceHelper.optionParams(new HttpParams({encoder: new CustomEncoder()}), options);
         const result: T = new type();
@@ -84,7 +84,7 @@ export class ResourceService {
             catchError(error => observableThrowError(error)));
     }
 
-    public customQuery<T extends Resource>(type: { new(): T },
+    public customQuery<T extends Resource>(type: new() => T,
                                            query: string,
                                            resource: string,
                                            embedded: string,
@@ -100,7 +100,7 @@ export class ResourceService {
             catchError(error => observableThrowError(error)));
     }
 
-    public customQueryPost<T extends Resource>(type: { new(): T }, query: string, resource: string,
+    public customQueryPost<T extends Resource>(type: new() => T, query: string, resource: string,
                                                embedded: string, options?: HalOptions, body?: any,
                                                subType?: SubTypeBuilder): Observable<ResourceArray<T>> {
         const uri = this.getResourceUrl(resource + query);
@@ -113,7 +113,7 @@ export class ResourceService {
             catchError(error => observableThrowError(error)));
     }
 
-    public getByRelation<T extends Resource>(type: { new(): T }, resourceLink: string): Observable<T> {
+    public getByRelation<T extends Resource>(type: new() => T, resourceLink: string): Observable<T> {
         const result: T = new type();
 
         this.setUrlsResource(result);
@@ -122,7 +122,7 @@ export class ResourceService {
             catchError(error => observableThrowError(error)));
     }
 
-    public getByRelationArray<T extends Resource>(type: { new(): T },
+    public getByRelationArray<T extends Resource>(type: new() => T,
                                                   resourceLink: string,
                                                   embedded: string,
                                                   builder?: SubTypeBuilder): Observable<ResourceArray<T>> {
@@ -136,7 +136,7 @@ export class ResourceService {
         );
     }
 
-    public getProjection<T extends Resource>(type: { new(): T },
+    public getProjection<T extends Resource>(type: new() => T,
                                              resource: string,
                                              id: string,
                                              projectionName: string): Observable<T> {
@@ -150,7 +150,7 @@ export class ResourceService {
         );
     }
 
-    public getProjectionArray<T extends Resource>(type: { new(): T },
+    public getProjectionArray<T extends Resource>(type: new() => T,
                                                   resource: string,
                                                   projectionName: string): Observable<T[]> {
         const uri = this.getResourceUrl(resource).concat('?projection=' + projectionName);
@@ -247,33 +247,33 @@ export class ResourceService {
         return resourceArray.lastUri !== undefined;
     }
 
-    public next<T extends Resource>(resourceArray: ResourceArray<T>, type: { new(): T }): Observable<ResourceArray<T>> {
+    public next<T extends Resource>(resourceArray: ResourceArray<T>, type: new() => T): Observable<ResourceArray<T>> {
         return resourceArray.next(type);
     }
 
-    public prev<T extends Resource>(resourceArray: ResourceArray<T>, type: { new(): T }): Observable<ResourceArray<T>> {
+    public prev<T extends Resource>(resourceArray: ResourceArray<T>, type: new() => T): Observable<ResourceArray<T>> {
         return resourceArray.prev(type);
     }
 
-    public first<T extends Resource>(resourceArray: ResourceArray<T>, type: { new(): T }): Observable<ResourceArray<T>> {
+    public first<T extends Resource>(resourceArray: ResourceArray<T>, type: new() => T): Observable<ResourceArray<T>> {
         return resourceArray.first(type);
     }
 
-    public last<T extends Resource>(resourceArray: ResourceArray<T>, type: { new(): T }): Observable<ResourceArray<T>> {
+    public last<T extends Resource>(resourceArray: ResourceArray<T>, type: new() => T): Observable<ResourceArray<T>> {
         return resourceArray.last(type);
     }
 
-    public page<T extends Resource>(resourceArray: ResourceArray<T>, type: { new(): T }, id: number): Observable<ResourceArray<T>> {
+    public page<T extends Resource>(resourceArray: ResourceArray<T>, type: new() => T, id: number): Observable<ResourceArray<T>> {
         return resourceArray.page(type, id);
     }
 
     public sortElements<T extends Resource>(resourceArray: ResourceArray<T>,
-                                            type: { new(): T },
+                                            type: new() => T,
                                             ...sort: Sort[]): Observable<ResourceArray<T>> {
         return resourceArray.sortElements(type, ...sort);
     }
 
-    public size<T extends Resource>(resourceArray: ResourceArray<T>, type: { new(): T }, size: number): Observable<ResourceArray<T>> {
+    public size<T extends Resource>(resourceArray: ResourceArray<T>, type: new() => T, size: number): Observable<ResourceArray<T>> {
         return resourceArray.size(type, size);
     }
 
