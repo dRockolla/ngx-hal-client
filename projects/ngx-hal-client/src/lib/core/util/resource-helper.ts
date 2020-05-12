@@ -1,12 +1,12 @@
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import * as url from 'url';
 import { BaseResource } from '../model/base-resource';
+import { HalOptions, HalParam, Include, LinkParams, ResourceOptions } from '../model/common';
+import { isEmbeddedResource, isResource } from '../model/defenition';
 import { SubTypeBuilder } from '../model/interface/subtype-builder';
 import { Resource } from '../model/resource';
-import { Utils } from './utils';
-import { HalOptions, HalParam, Include, LinkParams, ResourceOptions } from '../model/common';
 import { ResourceArray } from '../model/resource-array';
-import { isEmbeddedResource, isResource } from '../model/defenition';
+import { Utils } from './utils';
 
 export class ResourceHelper {
 
@@ -189,12 +189,12 @@ export class ResourceHelper {
                 for (let i = 0; i < payload[key].length; i++) {
                     if (isEmbeddedResource(payload[key][i])) {
                         // TODO: check that it's work
-                        payload[key][i] = ResourceHelper.createResource(payload[key][i], payload[key][i]);
+                        payload[key][i] = ResourceHelper.createResource(payload, payload[key][i]);
                     }
                 }
             } else if (isEmbeddedResource(payload[key])) {
                 // TODO: check that it's work
-                payload[key] = ResourceHelper.createResource(payload[key], payload[key]);
+                payload[key] = ResourceHelper.createResource(payload, payload[key]);
             }
         }
 

@@ -2,14 +2,16 @@ import { Injector } from '@angular/core';
 import { of as observableOf, throwError as observableThrowError } from 'rxjs';
 import { Observable } from 'rxjs/internal/Observable';
 import { map, mergeMap } from 'rxjs/operators';
+import { HalOptions, HalParam, Include, ResourceOptions } from '../model/common';
 import { SubTypeBuilder } from '../model/interface/subtype-builder';
 import { Resource } from '../model/resource';
 import { ResourceArray } from '../model/resource-array';
 import { ResourcePage } from '../model/resource-page';
+import { DependencyInjector } from '../util/dependency-injector';
 import { Utils } from '../util/utils';
 import { ResourceService } from './resource.service';
-import { HalOptions, HalParam, Include, ResourceOptions } from '../model/common';
 
+// TODO: try to make config module as is
 export class RestService<T extends Resource> {
     private readonly type: any;
     private readonly resource: string;
@@ -20,11 +22,12 @@ export class RestService<T extends Resource> {
 
     constructor(type: new() => T,
                 resource: string,
-                private injector: Injector,
+                private injector?: Injector,
                 embedded?: string) {
+        console.log('Rest service')
         this.type = type;
         this.resource = resource;
-        this.resourceService = injector.get(ResourceService);
+        this.resourceService = DependencyInjector.get(ResourceService);
         if (!Utils.isNullOrUndefined(embedded)) {
             this.embedded = embedded;
         }

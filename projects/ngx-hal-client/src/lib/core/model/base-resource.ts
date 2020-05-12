@@ -1,17 +1,18 @@
+import { HttpParams } from '@angular/common/http';
+import { Injector } from '@angular/core';
 import { of as observableOf, throwError as observableThrowError } from 'rxjs';
-import { isObject } from 'rxjs/internal-compatibility';
 import { Observable } from 'rxjs/internal/Observable';
 import { catchError, map } from 'rxjs/operators';
+import uriTemplates from 'uri-templates';
 import { CacheHelper } from '../cache/cache.helper';
+import { SimpleService } from '../service/simple.service';
+import { CustomEncoder } from '../util/custom-encoder';
 import { ResourceHelper } from '../util/resource-helper';
 import { Utils } from '../util/utils';
+import { HalOptions, LinkOptions } from './common';
 import { SubTypeBuilder } from './interface/subtype-builder';
 import { Resource } from './resource';
-import { HttpParams } from '@angular/common/http';
-import { CustomEncoder } from '../util/custom-encoder';
 import { ResourceArray } from './resource-array';
-import uriTemplates from 'uri-templates';
-import { HalOptions, LinkOptions } from './common';
 
 export interface Link {
     href: string;
@@ -22,6 +23,12 @@ export interface Links {
     [key: string]: Link;
 }
 
+const xhrFactoryInjector = Injector.create({
+    providers: [
+        {provide: SimpleService, useClass: SimpleService, deps: []},
+    ]
+});
+
 export abstract class BaseResource {
 
     public proxyUrl: string;
@@ -30,7 +37,15 @@ export abstract class BaseResource {
 
     public _links: Links;
 
-    // Get related resource
+    // private simpleService = xhrFactoryInjector.get(SimpleService);
+
+    // private httpClient = xhrFactoryInjector.get(HttpClient);
+
+    constructor() {
+        // this.simpleService.hello();
+    }
+
+// Get related resource
     public getRelation<T extends Resource>(type: new() => T,
                                            relation: string,
                                            builder?: SubTypeBuilder,
@@ -109,7 +124,7 @@ export abstract class BaseResource {
             // Use this obj to clear relation url from any http params template because we will pass params in request
             const urlAsObj = new URL(this.getRelationLinkHref(relation));
             const observable = ResourceHelper.getHttp()
-                .get(ResourceHelper.getProxy(`${urlAsObj.origin}${urlAsObj.pathname}`), {
+                .get(ResourceHelper.getProxy(`${ urlAsObj.origin }${ urlAsObj.pathname }`), {
                     headers: ResourceHelper.headers,
                     params: httpParams
                 });

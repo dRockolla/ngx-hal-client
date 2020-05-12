@@ -2,8 +2,9 @@ import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { ModuleWithProviders, NgModule } from '@angular/core';
 import { ExternalService } from './core/service/external.service';
 import { ResourceService } from './core/service/resource.service';
+import { SimpleService } from './core/service/simple.service';
 
-export { CacheHelper } from './core/cache/cache.helper'
+export { CacheHelper } from './core/cache/cache.helper';
 export { ExternalService } from './core/service/external.service';
 export { RestService } from './core/service/rest.service';
 export { Resource } from './core/model/resource';
@@ -16,6 +17,7 @@ export { ExternalConfiguration } from './core/config/external-configuration';
 export { ExternalConfigurationHandlerInterface } from './core/config/external-configuration.handler';
 export { HalOptions, HalParam, Include } from './core/model/common';
 export { SubTypeBuilder } from './core/model/interface/subtype-builder';
+export { SimpleService } from './core/service/simple.service';
 
 @NgModule({
     imports: [HttpClientModule],
@@ -27,8 +29,10 @@ export { SubTypeBuilder } from './core/model/interface/subtype-builder';
         {
             provide: ResourceService,
             useClass: ResourceService,
-            deps: [ExternalService]
-        }]
+            deps: [ExternalService],
+        },
+        SimpleService
+    ]
 })
 export class NgxHalClientModule {
     static forRoot(): ModuleWithProviders<NgxHalClientModule> {
@@ -41,7 +45,8 @@ export class NgxHalClientModule {
                     provide: ResourceService,
                     useClass: ResourceService,
                     deps: [ExternalService]
-                }
+                },
+                SimpleService
             ]
         };
     }

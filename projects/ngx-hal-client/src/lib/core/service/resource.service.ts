@@ -5,6 +5,7 @@ import { Observable } from 'rxjs/internal/Observable';
 
 import { catchError, map } from 'rxjs/operators';
 import { CacheHelper } from '../cache/cache.helper';
+import { HalOptions, HalParam, Include, ResourceOptions } from '../model/common';
 import { Sort } from '../model/interface/sort';
 import { SubTypeBuilder } from '../model/interface/subtype-builder';
 import { Resource } from '../model/resource';
@@ -12,12 +13,15 @@ import { ResourceArray } from '../model/resource-array';
 import { CustomEncoder } from '../util/custom-encoder';
 import { ResourceHelper } from '../util/resource-helper';
 import { ExternalService } from './external.service';
-import { HalOptions, HalParam, Include, ResourceOptions } from '../model/common';
+import { SimpleService } from './simple.service';
 
 @Injectable()
 export class ResourceService {
 
-    constructor(private externalService: ExternalService) {
+    constructor(private externalService: ExternalService,
+                private sS: SimpleService) {
+        console.log('ResourceService')
+        console.log(externalService)
     }
 
     private static getURL(): string {

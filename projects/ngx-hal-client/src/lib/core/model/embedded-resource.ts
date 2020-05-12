@@ -1,4 +1,3 @@
-import { Injectable } from '@angular/core';
 import { BaseResource } from './base-resource';
 
 /**
@@ -13,6 +12,5 @@ import { BaseResource } from './base-resource';
  *   product: Product;
  * }
  */
-@Injectable()
 export class EmbeddedResource extends BaseResource {
 }
