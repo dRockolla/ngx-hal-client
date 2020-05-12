@@ -1,5 +1,5 @@
-import { Resource } from './resource';
 import { isObject } from 'rxjs/internal-compatibility';
+import { Resource } from './resource';
 
 
 export function isEmbeddedResource(object: any) {
@@ -8,5 +8,6 @@ export function isEmbeddedResource(object: any) {
 }
 
 export function isResource(value: Resource | string | number | boolean): value is Resource {
-    return (value as Resource).getSelfLinkHref() !== undefined;
+    return (value as Resource).getSelfLinkHref !== undefined
+        && typeof (value as Resource).getSelfLinkHref === 'function';
 }
