@@ -6,6 +6,8 @@ import { ResourceHelper } from '../util/resource-helper';
 import { ArrayInterface } from './interface/array-interface';
 import { Sort } from './interface/sort';
 import { Resource } from './resource';
+import { HttpConfigService } from '../service/http-config.service';
+import { DependencyInjector } from '../util/dependency-injector';
 
 export class ResourceArray<T extends Resource> implements ArrayInterface<T> {
     public sortInfo: Sort[];
@@ -28,8 +30,11 @@ export class ResourceArray<T extends Resource> implements ArrayInterface<T> {
 
     public result: T[] = [];
 
+    private httpConfig: HttpConfigService;
+
     constructor(embedded: string) {
         this._embedded = embedded;
+        this.httpConfig = DependencyInjector.get(HttpConfigService)
     }
 
     private static replaceOrAdd(query: string, field: string, value: string): string {
@@ -67,7 +72,7 @@ export class ResourceArray<T extends Resource> implements ArrayInterface<T> {
 // Load next page
     next = (type: new() => T): Observable<ResourceArray<T>> => {
         if (this.nextUri) {
-            return ResourceHelper.getHttp().get(ResourceHelper.getProxy(this.nextUri), {headers: ResourceHelper.headers}).pipe(
+            return ResourceHelper.getHttp().get(this.httpConfig.getProxy(this.nextUri), {headers: ResourceHelper.headers}).pipe(
                 map(response => this.init(type, response, this.sortInfo)),
                 catchError(error => observableThrowError(error)),);
         }
@@ -76,7 +81,7 @@ export class ResourceArray<T extends Resource> implements ArrayInterface<T> {
 
     prev = (type: new() => T): Observable<ResourceArray<T>> => {
         if (this.prevUri) {
-            return ResourceHelper.getHttp().get(ResourceHelper.getProxy(this.prevUri), {headers: ResourceHelper.headers}).pipe(
+            return ResourceHelper.getHttp().get(this.httpConfig.getProxy(this.prevUri), {headers: ResourceHelper.headers}).pipe(
                 map(response => this.init(type, response, this.sortInfo)),
                 catchError(error => observableThrowError(error)),);
         }
@@ -87,7 +92,7 @@ export class ResourceArray<T extends Resource> implements ArrayInterface<T> {
 
     first = (type: new() => T): Observable<ResourceArray<T>> => {
         if (this.firstUri) {
-            return ResourceHelper.getHttp().get(ResourceHelper.getProxy(this.firstUri), {headers: ResourceHelper.headers}).pipe(
+            return ResourceHelper.getHttp().get(this.httpConfig.getProxy(this.firstUri), {headers: ResourceHelper.headers}).pipe(
                 map(response => this.init(type, response, this.sortInfo)),
                 catchError(error => observableThrowError(error)),);
         }
@@ -98,7 +103,7 @@ export class ResourceArray<T extends Resource> implements ArrayInterface<T> {
 
     last = (type: new() => T): Observable<ResourceArray<T>> => {
         if (this.lastUri) {
-            return ResourceHelper.getHttp().get(ResourceHelper.getProxy(this.lastUri), {headers: ResourceHelper.headers}).pipe(
+            return ResourceHelper.getHttp().get(this.httpConfig.getProxy(this.lastUri), {headers: ResourceHelper.headers}).pipe(
                 map(response => this.init(type, response, this.sortInfo)),
                 catchError(error => observableThrowError(error)),);
         }
@@ -110,13 +115,13 @@ export class ResourceArray<T extends Resource> implements ArrayInterface<T> {
     page = (type: new() => T, pageNumber: number): Observable<ResourceArray<T>> => {
         this.selfUri = this.selfUri.replace('{?page,size,sort,projection}', '');
         this.selfUri = this.selfUri.replace('{&sort}', '');
-        const urlParsed = url.parse(ResourceHelper.getProxy(this.selfUri));
+        const urlParsed = url.parse(this.httpConfig.getProxy(this.selfUri));
         let query: string = ResourceArray.replaceOrAdd(urlParsed.query, 'size', this.pageSize.toString());
         query = ResourceArray.replaceOrAdd(query, 'page', pageNumber.toString());
 
 
         let uri = urlParsed.query ?
-            ResourceHelper.getProxy(this.selfUri).replace(urlParsed.query, query) : ResourceHelper.getProxy(this.selfUri).concat(query);
+            this.httpConfig.getProxy(this.selfUri).replace(urlParsed.query, query) : this.httpConfig.getProxy(this.selfUri).concat(query);
         uri = this.addSortInfo(uri);
         return ResourceHelper.getHttp().get(uri, {headers: ResourceHelper.headers}).pipe(
             map(response => this.init(type, response, this.sortInfo)),
@@ -129,7 +134,7 @@ export class ResourceArray<T extends Resource> implements ArrayInterface<T> {
     sortElements = (type: new() => T, ...sort: Sort[]): Observable<ResourceArray<T>> => {
         this.selfUri = this.selfUri.replace('{?page,size,sort}', '');
         this.selfUri = this.selfUri.replace('{&sort}', '');
-        let uri = ResourceHelper.getProxy(this.selfUri)
+        let uri = this.httpConfig.getProxy(this.selfUri)
             .concat('?', 'size=', this.pageSize.toString(), '&page=', this.pageNumber.toString());
         uri = this.addSortInfo(uri);
         return ResourceHelper.getHttp().get(uri, {headers: ResourceHelper.headers}).pipe(
@@ -140,7 +145,7 @@ export class ResourceArray<T extends Resource> implements ArrayInterface<T> {
 // Load page with given size
 
     size = (type: new() => T, size: number): Observable<ResourceArray<T>> => {
-        let uri = ResourceHelper.getProxy(this.selfUri).concat('?', 'size=', size.toString());
+        let uri = this.httpConfig.getProxy(this.selfUri).concat('?', 'size=', size.toString());
         uri = this.addSortInfo(uri);
         return ResourceHelper.getHttp().get(uri, {headers: ResourceHelper.headers}).pipe(
             map(response => this.init(type, response, this.sortInfo)),

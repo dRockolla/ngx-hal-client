@@ -8,8 +8,8 @@ import { Resource } from '../model/resource';
 import { ResourceArray } from '../model/resource-array';
 import { ResourcePage } from '../model/resource-page';
 import { DependencyInjector } from '../util/dependency-injector';
-import { Utils } from '../util/utils';
 import { ResourceService } from './resource.service';
+import { ObjectUtils } from '../util/object.utils';
 
 // TODO: try to make config module as is
 export class RestService<T extends Resource> {
@@ -28,7 +28,7 @@ export class RestService<T extends Resource> {
         this.type = type;
         this.resource = resource;
         this.resourceService = DependencyInjector.get(ResourceService);
-        if (!Utils.isNullOrUndefined(embedded)) {
+        if (!ObjectUtils.isNullOrUndefined(embedded)) {
             this.embedded = embedded;
         }
     }
@@ -40,7 +40,7 @@ export class RestService<T extends Resource> {
     public getAll(options?: HalOptions, subType?: SubTypeBuilder): Observable<T[]> {
         return this.resourceService.getAll(this.type, this.resource, this.embedded, options, subType).pipe(
             mergeMap((resourceArray: ResourceArray<T>) => {
-                if (options && options.notPaged && !Utils.isNullOrUndefined(resourceArray.firstUri)) {
+                if (options && options.notPaged && !ObjectUtils.isNullOrUndefined(resourceArray.firstUri)) {
                     options.notPaged = false;
                     options.size = resourceArray.totalElements;
                     return this.getAll(options);
@@ -62,7 +62,7 @@ export class RestService<T extends Resource> {
     public search(query: string, options?: HalOptions, subType?: SubTypeBuilder): Observable<T[]> {
         return this.resourceService.search(this.type, query, this.resource, this.embedded, options, subType).pipe(
             mergeMap((resourceArray: ResourceArray<T>) => {
-                if (options && options.notPaged && !Utils.isNullOrUndefined(resourceArray.firstUri)) {
+                if (options && options.notPaged && !ObjectUtils.isNullOrUndefined(resourceArray.firstUri)) {
                     options.notPaged = false;
                     options.size = resourceArray.totalElements;
                     return this.search(query, options, subType);
@@ -89,7 +89,7 @@ export class RestService<T extends Resource> {
     public customQuery(query: string, options?: HalOptions, subType?: SubTypeBuilder): Observable<T[]> {
         return this.resourceService.customQuery(this.type, query, this.resource, this.embedded, options, subType).pipe(
             mergeMap((resourceArray: ResourceArray<T>) => {
-                if (options && options.notPaged && !Utils.isNullOrUndefined(resourceArray.firstUri)) {
+                if (options && options.notPaged && !ObjectUtils.isNullOrUndefined(resourceArray.firstUri)) {
                     options.notPaged = false;
                     options.size = resourceArray.totalElements;
                     return this.customQuery(query, options, subType);
@@ -103,7 +103,7 @@ export class RestService<T extends Resource> {
     public customQueryPost(query: string, options?: HalOptions, body?: any, subType?: SubTypeBuilder): Observable<T[]> {
         return this.resourceService.customQueryPost(this.type, query, this.resource, this.embedded, options, body, subType).pipe(
             mergeMap((resourceArray: ResourceArray<T>) => {
-                if (options && options.notPaged && !Utils.isNullOrUndefined(resourceArray.firstUri)) {
+                if (options && options.notPaged && !ObjectUtils.isNullOrUndefined(resourceArray.firstUri)) {
                     options.notPaged = false;
                     options.size = resourceArray.totalElements;
                     return this.customQueryPost(query, options, body, subType);
@@ -141,7 +141,7 @@ export class RestService<T extends Resource> {
     public patch(entity: T, options?: Array<ResourceOptions> | Include) {
         if (Array.isArray(options)) {
             return this.resourceService.patch(entity, options);
-        } else if (!Utils.isNullOrUndefined(options)) {
+        } else if (!ObjectUtils.isNullOrUndefined(options)) {
             return this.resourceService.patch(entity, options);
         } else {
             return this.resourceService.patch(entity);

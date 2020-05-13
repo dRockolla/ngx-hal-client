@@ -1,11 +1,10 @@
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { ModuleWithProviders, NgModule } from '@angular/core';
-import { ExternalService } from './core/service/external.service';
 import { ResourceService } from './core/service/resource.service';
-import { SimpleService } from './core/service/simple.service';
+import { HalConfigurationService } from './core/service/hal-configuration.service';
+import { HttpConfigService } from './core/service/http-config.service';
 
 export { CacheHelper } from './core/cache/cache.helper';
-export { ExternalService } from './core/service/external.service';
 export { RestService } from './core/service/rest.service';
 export { Resource } from './core/model/resource';
 export { EmbeddedResource } from './core/model/embedded-resource';
@@ -17,21 +16,19 @@ export { ExternalConfiguration } from './core/config/external-configuration';
 export { ExternalConfigurationHandlerInterface } from './core/config/external-configuration.handler';
 export { HalOptions, HalParam, Include } from './core/model/common';
 export { SubTypeBuilder } from './core/model/interface/subtype-builder';
-export { SimpleService } from './core/service/simple.service';
+export { HalConfigurationService } from './core/service/hal-configuration.service';
 
 @NgModule({
     imports: [HttpClientModule],
     declarations: [],
     exports: [HttpClientModule],
     providers: [
-        ExternalService,
+        HttpConfigService,
         HttpClient,
         {
             provide: ResourceService,
             useClass: ResourceService,
-            deps: [ExternalService],
-        },
-        SimpleService
+        }
     ]
 })
 export class NgxHalClientModule {
@@ -39,14 +36,13 @@ export class NgxHalClientModule {
         return {
             ngModule: NgxHalClientModule,
             providers: [
-                ExternalService,
+                // ExternalService,
                 HttpClient,
                 {
                     provide: ResourceService,
-                    useClass: ResourceService,
-                    deps: [ExternalService]
+                    useClass: ResourceService
                 },
-                SimpleService
+                HalConfigurationService
             ]
         };
     }

@@ -6,6 +6,9 @@ import { PageResult } from './interface/page-result';
 import { Sort } from './interface/sort';
 import { Resource } from './resource';
 import { ResourceArray } from './resource-array';
+import { HttpConfigService } from '../service/http-config.service';
+import { DependencyInjector } from '../util/dependency-injector';
+import { UrlUtils } from '../util/url.utils';
 
 /**
  * Object allow to work with paged resources.
@@ -27,6 +30,8 @@ export class ResourcePage<T extends Resource> {
 
     private resourceType: T;
 
+    private httpConfig: HttpConfigService;
+
     constructor(resourceArray?: ResourceArray<T>) {
         if (resourceArray) {
             this.resources = resourceArray.result;
@@ -39,6 +44,7 @@ export class ResourcePage<T extends Resource> {
             this.totalElements = resourceArray.totalElements;
             this.pageNumber = resourceArray.pageNumber;
         }
+        this.httpConfig = DependencyInjector.get(HttpConfigService)
     }
 
     init(result: PageResult<T>): ResourcePage<T> {
@@ -91,7 +97,7 @@ export class ResourcePage<T extends Resource> {
     }
 
     page(pageNumber: number): Observable<ResourcePage<T>> {
-        const uri = ResourceHelper.removeUrlTemplateVars(this.selfUri);
+        const uri = UrlUtils.removeUrlTemplateVars(this.selfUri);
         let httpParams = new HttpParams({fromString: uri});
         httpParams = httpParams.set('page', pageNumber.toString());
 
@@ -99,7 +105,7 @@ export class ResourcePage<T extends Resource> {
     }
 
     size(size: number): Observable<ResourcePage<T>> {
-        const uri = ResourceHelper.removeUrlTemplateVars(this.selfUri);
+        const uri = UrlUtils.removeUrlTemplateVars(this.selfUri);
         let httpParams = new HttpParams({fromString: uri});
         httpParams = httpParams.set('size', size.toString());
 
@@ -107,7 +113,7 @@ export class ResourcePage<T extends Resource> {
     }
 
     sortElements(...sort: Sort[]): Observable<ResourcePage<T>> {
-        const uri = ResourceHelper.removeUrlTemplateVars(this.selfUri);
+        const uri = UrlUtils.removeUrlTemplateVars(this.selfUri);
         let httpParams = new HttpParams({fromString: uri});
         sort.forEach((s: Sort) => {
             httpParams = httpParams.append('sort', `${s.path},${s.order}`);
@@ -118,7 +124,7 @@ export class ResourcePage<T extends Resource> {
 
     private doRequest(uri: string): Observable<ResourcePage<T>> {
         if (uri) {
-            return ResourceHelper.getHttp().get(ResourceHelper.getProxy(uri),
+            return ResourceHelper.getHttp().get(this.httpConfig.getProxy(uri),
                 {headers: ResourceHelper.headers})
                 .pipe(
                     map((response: PageResult<T>) => this.init(response)),

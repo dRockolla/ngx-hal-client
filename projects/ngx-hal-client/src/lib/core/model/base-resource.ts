@@ -1,18 +1,19 @@
 import { HttpParams } from '@angular/common/http';
-import { Injector } from '@angular/core';
 import { of as observableOf, throwError as observableThrowError } from 'rxjs';
 import { Observable } from 'rxjs/internal/Observable';
 import { catchError, map } from 'rxjs/operators';
 import uriTemplates from 'uri-templates';
 import { CacheHelper } from '../cache/cache.helper';
-import { SimpleService } from '../service/simple.service';
 import { CustomEncoder } from '../util/custom-encoder';
 import { ResourceHelper } from '../util/resource-helper';
-import { Utils } from '../util/utils';
 import { HalOptions, LinkOptions } from './common';
 import { SubTypeBuilder } from './interface/subtype-builder';
 import { Resource } from './resource';
 import { ResourceArray } from './resource-array';
+import { HttpConfigService } from '../service/http-config.service';
+import { DependencyInjector } from '../util/dependency-injector';
+import { UrlUtils } from '../util/url.utils';
+import { ObjectUtils } from '../util/object.utils';
 
 export interface Link {
     href: string;
@@ -23,12 +24,6 @@ export interface Links {
     [key: string]: Link;
 }
 
-const xhrFactoryInjector = Injector.create({
-    providers: [
-        {provide: SimpleService, useClass: SimpleService, deps: []},
-    ]
-});
-
 export abstract class BaseResource {
 
     public proxyUrl: string;
@@ -37,12 +32,10 @@ export abstract class BaseResource {
 
     public _links: Links;
 
-    // private simpleService = xhrFactoryInjector.get(SimpleService);
-
-    // private httpClient = xhrFactoryInjector.get(HttpClient);
+    private httpConfig: HttpConfigService;
 
     constructor() {
-        // this.simpleService.hello();
+        this.httpConfig = DependencyInjector.get(HttpConfigService);
     }
 
 // Get related resource
@@ -58,7 +51,7 @@ export abstract class BaseResource {
             }
 
             const observable = ResourceHelper.getHttp()
-                .get(ResourceHelper.getProxy(this.getRelationLinkHref(relation)),
+                .get(this.httpConfig.getProxy(this.getRelationLinkHref(relation)),
                     {headers: ResourceHelper.headers});
             return observable.pipe(map((data: any) => {
                 if (builder) {
@@ -66,7 +59,7 @@ export abstract class BaseResource {
                         if (embeddedClassName === 'self') {
                             const href: string = data._links[embeddedClassName].href;
                             const idx: number = href.lastIndexOf('/');
-                            const realClassName = href.replace(ResourceHelper.getRootUri(), '').substring(0, idx);
+                            const realClassName = href.replace(this.httpConfig.rootUri, '').substring(0, idx);
                             result = ResourceHelper.searchSubtypes(builder, realClassName, result);
                             break;
                         }
@@ -114,8 +107,8 @@ export abstract class BaseResource {
                                                 expireMs: number = CacheHelper.defaultExpire,
                                                 isCacheActive: boolean = true): Observable<T[]> {
 
-        const httpParams = ResourceHelper.optionParams(new HttpParams({encoder: new CustomEncoder()}), options);
-        const result: ResourceArray<T> = new ResourceArray<T>(Utils.isNullOrUndefined(embedded) ? '_embedded' : embedded);
+        const httpParams = UrlUtils.optionParams(new HttpParams({encoder: new CustomEncoder()}), options);
+        const result: ResourceArray<T> = new ResourceArray<T>(ObjectUtils.isNullOrUndefined(embedded) ? '_embedded' : embedded);
         if (this.existRelationLink(relation)) {
             if (CacheHelper.ifPresent(this.getRelationLinkHref(relation), null, options, isCacheActive)) {
                 return observableOf(CacheHelper.getArray(this.getRelationLinkHref(relation)));
@@ -124,7 +117,7 @@ export abstract class BaseResource {
             // Use this obj to clear relation url from any http params template because we will pass params in request
             const urlAsObj = new URL(this.getRelationLinkHref(relation));
             const observable = ResourceHelper.getHttp()
-                .get(ResourceHelper.getProxy(`${ urlAsObj.origin }${ urlAsObj.pathname }`), {
+                .get(this.httpConfig.getProxy(`${ urlAsObj.origin }${ urlAsObj.pathname }`), {
                     headers: ResourceHelper.headers,
                     params: httpParams
                 });
@@ -170,7 +163,7 @@ export abstract class BaseResource {
         }
         const header = ResourceHelper.headers.append('Content-Type', 'text/uri-list');
         return ResourceHelper.getHttp()
-            .put(ResourceHelper.getProxy(this.getRelationLinkHref(relation)),
+            .put(this.httpConfig.getProxy(this.getRelationLinkHref(relation)),
                 resource._links.self.href, {headers: header});
     }
 
@@ -183,7 +176,7 @@ export abstract class BaseResource {
         CacheHelper.evictEntityLink(this.getRelationLinkHref(relation));
 
         return ResourceHelper.getHttp()
-            .patch(ResourceHelper.getProxy(this.getRelationLinkHref(relation)),
+            .patch(this.httpConfig.getProxy(this.getRelationLinkHref(relation)),
                 resource._links.self.href, {headers: header});
     }
 
@@ -196,7 +189,7 @@ export abstract class BaseResource {
 
         CacheHelper.evictEntityLink(this.getRelationLinkHref(relation));
         return ResourceHelper.getHttp()
-            .put(ResourceHelper.getProxy(this.getRelationLinkHref(relation)),
+            .put(this.httpConfig.getProxy(this.getRelationLinkHref(relation)),
                 resource._links.self.href, {headers: header});
     }
 
@@ -216,7 +209,7 @@ export abstract class BaseResource {
         CacheHelper.evictEntityLink(this.getRelationLinkHref(relation) + '/' + relationId);
 
         return ResourceHelper.getHttp()
-            .delete(ResourceHelper.getProxy(this.getRelationLinkHref(relation) + '/' + relationId),
+            .delete(this.httpConfig.getProxy(this.getRelationLinkHref(relation) + '/' + relationId),
                 {headers: ResourceHelper.headers});
     }
 
@@ -225,40 +218,40 @@ export abstract class BaseResource {
         if (!this.existRelationLink(relation)) {
             return observableThrowError('no relation found');
         }
-        if (!Utils.isNullOrUndefined(options) && !Utils.isNullOrUndefined(options.params)) {
+        if (!ObjectUtils.isNullOrUndefined(options) && !ObjectUtils.isNullOrUndefined(options.params)) {
             if (this._links[relation].templated
-                && !Utils.isNullOrUndefined(options.strictParams) && options.strictParams) {
+                && !ObjectUtils.isNullOrUndefined(options.strictParams) && options.strictParams) {
                 CacheHelper.evictEntityLink(this.getRelationLinkHref(relation));
 
                 const uriTemplate = uriTemplates(this._links[relation].href);
                 const url = uriTemplate.fillFromObject(options.params);
 
                 return ResourceHelper.getHttp()
-                    .post(ResourceHelper.getProxy(url), body)
+                    .post(this.httpConfig.getProxy(url), body)
                     .pipe(
-                        map(data => ResourceHelper.instantiateResource(Utils.clone(this), data))
+                        map(data => ResourceHelper.instantiateResource(ObjectUtils.clone(this), data))
                     );
             }
 
-            const httpParams = ResourceHelper.linkParamsToHttpParams(options.params);
+            const httpParams = UrlUtils.linkParamsToHttpParams(options.params);
             CacheHelper.evictEntityLink(this.getRelationLinkHref(relation));
 
             return ResourceHelper.getHttp()
-                .post(ResourceHelper.getProxy(this.getRelationLinkHref(relation)), body,
+                .post(this.httpConfig.getProxy(this.getRelationLinkHref(relation)), body,
                     {
                         params: httpParams
                     }
                 )
                 .pipe(
-                    map(data => ResourceHelper.instantiateResource(Utils.clone(this), data))
+                    map(data => ResourceHelper.instantiateResource(ObjectUtils.clone(this), data))
                 );
         }
         CacheHelper.evictEntityLink(this.getRelationLinkHref(relation));
 
         return ResourceHelper.getHttp()
-            .post(ResourceHelper.getProxy(this.getRelationLinkHref(relation)), body)
+            .post(this.httpConfig.getProxy(this.getRelationLinkHref(relation)), body)
             .pipe(
-                map(data => ResourceHelper.instantiateResource(Utils.clone(this), data))
+                map(data => ResourceHelper.instantiateResource(ObjectUtils.clone(this), data))
             );
     }
 
@@ -267,55 +260,55 @@ export abstract class BaseResource {
         if (!this.existRelationLink(relation)) {
             return observableThrowError('no relation found');
         }
-        if (!Utils.isNullOrUndefined(options) && !Utils.isNullOrUndefined(options.params)) {
+        if (!ObjectUtils.isNullOrUndefined(options) && !ObjectUtils.isNullOrUndefined(options.params)) {
             if (this._links[relation].templated
-                && !Utils.isNullOrUndefined(options.strictParams) && options.strictParams) {
+                && !ObjectUtils.isNullOrUndefined(options.strictParams) && options.strictParams) {
                 CacheHelper.evictEntityLink(this.getRelationLinkHref(relation));
 
                 const uriTemplate = uriTemplates(this._links[relation].href);
                 const url = uriTemplate.fillFromObject(options.params);
 
                 return ResourceHelper.getHttp()
-                    .patch(ResourceHelper.getProxy(url), body)
+                    .patch(this.httpConfig.getProxy(url), body)
                     .pipe(
-                        map(data => ResourceHelper.instantiateResource(Utils.clone(this), data))
+                        map(data => ResourceHelper.instantiateResource(ObjectUtils.clone(this), data))
                     );
             }
 
-            const httpParams = ResourceHelper.linkParamsToHttpParams(options.params);
+            const httpParams = UrlUtils.linkParamsToHttpParams(options.params);
             CacheHelper.evictEntityLink(this.getRelationLinkHref(relation));
 
             return ResourceHelper.getHttp()
-                .patch(ResourceHelper.getProxy(this.getRelationLinkHref(relation)), body,
+                .patch(this.httpConfig.getProxy(this.getRelationLinkHref(relation)), body,
                     {
                         params: httpParams
                     }
                 )
                 .pipe(
-                    map(data => ResourceHelper.instantiateResource(Utils.clone(this), data))
+                    map(data => ResourceHelper.instantiateResource(ObjectUtils.clone(this), data))
                 );
         }
 
         return ResourceHelper.getHttp()
-            .patch(ResourceHelper.getProxy(this.getRelationLinkHref(relation)), body)
+            .patch(this.httpConfig.getProxy(this.getRelationLinkHref(relation)), body)
             .pipe(
-                map(data => ResourceHelper.instantiateResource(Utils.clone(this), data))
+                map(data => ResourceHelper.instantiateResource(ObjectUtils.clone(this), data))
             );
     }
 
     protected existRelationLink(relation: string): boolean {
-        return !Utils.isNullOrUndefined(this._links) && !Utils.isNullOrUndefined(this._links[relation]);
+        return !ObjectUtils.isNullOrUndefined(this._links) && !ObjectUtils.isNullOrUndefined(this._links[relation]);
     }
 
     protected getRelationLinkHref(relation: string) {
         if (this._links[relation].templated) {
-            return ResourceHelper.removeUrlTemplateVars(this._links[relation].href);
+            return UrlUtils.removeUrlTemplateVars(this._links[relation].href);
         }
         return this._links[relation].href;
     }
 
     protected getResourceUrl(resource?: string): string {
-        let url = ResourceHelper.getURL();
+        let url = this.httpConfig.getURL();
         if (!url.endsWith('/')) {
             url = url.concat('/');
         }

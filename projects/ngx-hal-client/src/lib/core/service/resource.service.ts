@@ -12,20 +12,13 @@ import { Resource } from '../model/resource';
 import { ResourceArray } from '../model/resource-array';
 import { CustomEncoder } from '../util/custom-encoder';
 import { ResourceHelper } from '../util/resource-helper';
-import { ExternalService } from './external.service';
-import { SimpleService } from './simple.service';
+import { HttpConfigService } from './http-config.service';
+import { UrlUtils } from '../util/url.utils';
 
 @Injectable()
 export class ResourceService {
 
-    constructor(private externalService: ExternalService,
-                private sS: SimpleService) {
-        console.log('ResourceService')
-        console.log(externalService)
-    }
-
-    private static getURL(): string {
-        return ResourceHelper.getURL();
+    constructor(private httpConfig: HttpConfigService) {
     }
 
     public getAll<T extends Resource>(type: new() => T,
@@ -34,7 +27,7 @@ export class ResourceService {
                                       options?: HalOptions,
                                       subType?: SubTypeBuilder): Observable<ResourceArray<T>> {
         const uri = this.getResourceUrl(resource);
-        const httpParams = ResourceHelper.optionParams(new HttpParams({encoder: new CustomEncoder()}), options);
+        const httpParams = UrlUtils.optionParams(new HttpParams({encoder: new CustomEncoder()}), options);
         const result: ResourceArray<T> = new ResourceArray<T>(embedded);
 
         this.setUrls(result);
@@ -48,7 +41,7 @@ export class ResourceService {
     public get<T extends Resource>(type: new() => T, resource: string, id: any, params?: HalParam[]): Observable<T> {
         const uri = this.getResourceUrl(resource).concat('/', id);
         const result: T = new type();
-        const httpParams = ResourceHelper.params(new HttpParams(), params);
+        const httpParams = UrlUtils.params(new HttpParams(), params);
 
         this.setUrlsResource(result);
         const observable = ResourceHelper.getHttp().get(uri, {headers: ResourceHelper.headers, params: httpParams});
@@ -60,7 +53,7 @@ export class ResourceService {
         const result: T = new type();
 
         this.setUrlsResource(result);
-        const observable = ResourceHelper.getHttp().get(ResourceHelper.getProxy(resourceLink), {headers: ResourceHelper.headers});
+        const observable = ResourceHelper.getHttp().get(this.httpConfig.getProxy(resourceLink), {headers: ResourceHelper.headers});
         return observable.pipe(map(data => ResourceHelper.instantiateResource(result, data)),
             catchError(error => observableThrowError(error)));
     }
@@ -68,7 +61,7 @@ export class ResourceService {
     public search<T extends Resource>(type: new() => T, query: string, resource: string, embedded: string, options?: HalOptions,
                                       subType?: SubTypeBuilder): Observable<ResourceArray<T>> {
         const uri = this.getResourceUrl(resource).concat('/search/', query);
-        const httpParams = ResourceHelper.optionParams(new HttpParams({encoder: new CustomEncoder()}), options);
+        const httpParams = UrlUtils.optionParams(new HttpParams({encoder: new CustomEncoder()}), options);
         const result: ResourceArray<T> = new ResourceArray<T>(embedded);
 
         this.setUrls(result);
@@ -79,7 +72,7 @@ export class ResourceService {
 
     public searchSingle<T extends Resource>(type: new() => T, query: string, resource: string, options?: HalOptions): Observable<T> {
         const uri = this.getResourceUrl(resource).concat('/search/', query);
-        const httpParams = ResourceHelper.optionParams(new HttpParams({encoder: new CustomEncoder()}), options);
+        const httpParams = UrlUtils.optionParams(new HttpParams({encoder: new CustomEncoder()}), options);
         const result: T = new type();
 
         this.setUrlsResource(result);
@@ -95,7 +88,7 @@ export class ResourceService {
                                            options?: HalOptions,
                                            subType?: SubTypeBuilder): Observable<ResourceArray<T>> {
         const uri = this.getResourceUrl(resource + query);
-        const httpParams = ResourceHelper.optionParams(new HttpParams({encoder: new CustomEncoder()}), options);
+        const httpParams = UrlUtils.optionParams(new HttpParams({encoder: new CustomEncoder()}), options);
         const result: ResourceArray<T> = new ResourceArray<T>(embedded);
 
         this.setUrls(result);
@@ -108,11 +101,14 @@ export class ResourceService {
                                                embedded: string, options?: HalOptions, body?: any,
                                                subType?: SubTypeBuilder): Observable<ResourceArray<T>> {
         const uri = this.getResourceUrl(resource + query);
-        const httpParams = ResourceHelper.optionParams(new HttpParams(), options);
+        const httpParams = UrlUtils.optionParams(new HttpParams(), options);
         const result: ResourceArray<T> = new ResourceArray<T>(embedded);
 
         this.setUrls(result);
-        const observable = ResourceHelper.getHttp().post(uri, body, {headers: ResourceHelper.headers, params: httpParams});
+        const observable = ResourceHelper.getHttp().post(uri, body, {
+            headers: ResourceHelper.headers,
+            params: httpParams
+        });
         return observable.pipe(map(response => ResourceHelper.instantiateResourceCollection(type, response, result, subType)),
             catchError(error => observableThrowError(error)));
     }
@@ -172,19 +168,26 @@ export class ResourceService {
 
     public count(resource: string, query?: string, options?: HalOptions): Observable<number> {
         const uri = this.getResourceUrl(resource).concat('/search/' + (query === undefined ? 'countAll' : query));
-        const httpParams = ResourceHelper.optionParams(new HttpParams(), options);
+        const httpParams = UrlUtils.optionParams(new HttpParams(), options);
 
-        return ResourceHelper.getHttp().get(uri, {headers: ResourceHelper.headers, observe: 'response', params: httpParams}).pipe(
+        return ResourceHelper.getHttp().get(uri, {
+            headers: ResourceHelper.headers,
+            observe: 'response',
+            params: httpParams
+        }).pipe(
             map((response: HttpResponse<number>) => Number(response.body)),
             catchError(error => observableThrowError(error)));
     }
 
     public create<T extends Resource>(selfResource: string, entity: T) {
-        const uri = ResourceHelper.getURL() + selfResource;
+        const uri = this.httpConfig.getURL() + selfResource;
         const payload = ResourceHelper.resolveRelations(entity);
 
         this.setUrlsResource(entity);
-        const observable = ResourceHelper.getHttp().post(uri, payload, {headers: ResourceHelper.headers, observe: 'response'});
+        const observable = ResourceHelper.getHttp().post(uri, payload, {
+            headers: ResourceHelper.headers,
+            observe: 'response'
+        });
         return observable.pipe(map((response: HttpResponse<string>) => {
             if (response.status >= 200 && response.status <= 207) {
                 return ResourceHelper.instantiateResource(entity, response.body);
@@ -197,10 +200,13 @@ export class ResourceService {
 
     public update<T extends Resource>(entity: T) {
         CacheHelper.evictEntityLinks(entity);
-        const uri = ResourceHelper.getProxy(entity._links.self.href);
+        const uri = this.httpConfig.getProxy(entity._links.self.href);
         const payload = ResourceHelper.resolveRelations(entity);
         this.setUrlsResource(entity);
-        const observable = ResourceHelper.getHttp().put(uri, payload, {headers: ResourceHelper.headers, observe: 'response'});
+        const observable = ResourceHelper.getHttp().put(uri, payload, {
+            headers: ResourceHelper.headers,
+            observe: 'response'
+        });
         return observable.pipe(map((response: HttpResponse<string>) => {
             if (response.status >= 200 && response.status <= 207) {
                 return ResourceHelper.instantiateResource(entity, response.body);
@@ -213,10 +219,13 @@ export class ResourceService {
 
     public patch<T extends Resource>(entity: T, options?: Array<ResourceOptions> | Include) {
         CacheHelper.evictEntityLinks(entity);
-        const uri = ResourceHelper.getProxy(entity._links.self.href);
+        const uri = this.httpConfig.getProxy(entity._links.self.href);
         const payload = ResourceHelper.resolveRelations(entity, options);
         this.setUrlsResource(entity);
-        const observable = ResourceHelper.getHttp().patch(uri, payload, {headers: ResourceHelper.headers, observe: 'response'});
+        const observable = ResourceHelper.getHttp().patch(uri, payload, {
+            headers: ResourceHelper.headers,
+            observe: 'response'
+        });
         return observable.pipe(map((response: HttpResponse<string>) => {
             if (response.status >= 200 && response.status <= 207) {
                 return ResourceHelper.instantiateResource(entity, response.body);
@@ -229,7 +238,7 @@ export class ResourceService {
 
     public delete<T extends Resource>(entity: T): Observable<object> {
         CacheHelper.evictEntityLinks(entity);
-        const uri = ResourceHelper.getProxy(entity._links.self.href);
+        const uri = this.httpConfig.getProxy(entity._links.self.href);
         return ResourceHelper.getHttp()
             .delete(uri, {headers: ResourceHelper.headers})
             .pipe(catchError(error => observableThrowError(error)));
@@ -282,7 +291,7 @@ export class ResourceService {
     }
 
     private getResourceUrl(resource?: string): string {
-        let url: string = ResourceService.getURL();
+        let url: string = this.httpConfig.getURL();
         if (!url.endsWith('/')) {
             url = url.concat('/');
         }
@@ -295,12 +304,12 @@ export class ResourceService {
     }
 
     private setUrls<T extends Resource>(result: ResourceArray<T>) {
-        result.proxyUrl = this.externalService.getProxyUri();
-        result.rootUrl = this.externalService.getRootUri();
+        result.proxyUrl = this.httpConfig.proxyUri;
+        result.rootUrl = this.httpConfig.rootUri;
     }
 
     private setUrlsResource<T extends Resource>(result: T) {
-        result.proxyUrl = this.externalService.getProxyUri();
-        result.rootUrl = this.externalService.getRootUri();
+        result.proxyUrl = this.httpConfig.proxyUri;
+        result.rootUrl = this.httpConfig.rootUri;
     }
 }

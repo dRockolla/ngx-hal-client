@@ -1,25 +1,19 @@
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import * as url from 'url';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BaseResource } from '../model/base-resource';
-import { HalOptions, HalParam, Include, LinkParams, ResourceOptions } from '../model/common';
-import { isEmbeddedResource, isResource } from '../model/defenition';
+import { Include, ResourceOptions } from '../model/common';
+import { isEmbeddedResource } from '../model/defenition';
 import { SubTypeBuilder } from '../model/interface/subtype-builder';
 import { Resource } from '../model/resource';
 import { ResourceArray } from '../model/resource-array';
-import { Utils } from './utils';
+import { ObjectUtils } from './object.utils';
 
 export class ResourceHelper {
 
-    private static readonly URL_TEMPLATE_VAR_REGEXP = /{[^}]*}/g;
-    private static readonly EMPTY_STRING = '';
-
     private static _headers: HttpHeaders;
-    private static proxyUri: string;
-    private static rootUri: string;
     private static http: HttpClient;
 
     public static get headers(): HttpHeaders {
-        if (Utils.isNullOrUndefined(this._headers)) {
+        if (ObjectUtils.isNullOrUndefined(this._headers)) {
             this._headers = new HttpHeaders();
         }
         return this._headers;
@@ -27,54 +21,6 @@ export class ResourceHelper {
 
     public static set headers(headers: HttpHeaders) {
         this._headers = headers;
-    }
-
-    static optionParams(params: HttpParams, options?: HalOptions): HttpParams {
-        if (options) {
-
-            params = this.params(params, options.params);
-
-            if (options.size) {
-                params = params.append('size', options.size.toString());
-            }
-
-            if (options.sort) {
-                for (const s of options.sort) {
-                    let sortString = '';
-                    sortString = s.path ? sortString.concat(s.path) : sortString;
-                    sortString = s.order ? sortString.concat(',').concat(s.order) : sortString;
-                    params = params.append('sort', sortString);
-                }
-            }
-
-        }
-        return params;
-    }
-
-    static params(httpParams: HttpParams, params?: HalParam[]) {
-        if (params) {
-            for (const param of params) {
-                const paramValue = isResource(param.value)
-                    ? param.value.getSelfLinkHref()
-                    : param.value.toString();
-                httpParams = httpParams.append(param.key, paramValue);
-            }
-        }
-
-        return httpParams;
-    }
-
-    static linkParamsToHttpParams(params?: LinkParams) {
-        let httpParams = new HttpParams();
-        if (params) {
-            for (const param in params) {
-                if (params.hasOwnProperty(param)) {
-                    httpParams = httpParams.append(param, params[param]);
-                }
-            }
-        }
-
-        return httpParams;
     }
 
     static resolveRelations(resource: Resource, options?: Array<ResourceOptions> | Include): object {
@@ -94,8 +40,8 @@ export class ResourceHelper {
                 } else {
                     result[key] = null;
                 }
-            } else if (!Utils.isNullOrUndefined(resource[key])) {
-                if (ResourceHelper.className(resource[key])
+            } else if (!ObjectUtils.isNullOrUndefined(resource[key])) {
+                if (ObjectUtils.className(resource[key])
                     .find((className: string) => className === 'Resource') || resource[key]._links) {
                     if (resource[key]._links) {
                         result[key] = resource[key]._links.self.href;
@@ -105,9 +51,9 @@ export class ResourceHelper {
                     if (array) {
                         result[key] = [];
                         array.forEach((element) => {
-                            if (Utils.isPrimitive(element)) {
+                            if (ObjectUtils.isPrimitive(element)) {
                                 result[key].push(element);
-                            } else if (ResourceHelper.className(element)
+                            } else if (ObjectUtils.className(element)
                                 .find((className: string) => className === 'Resource') || element._links) {
                                 result[key].push(element._links.self.href);
                             } else {
@@ -121,24 +67,6 @@ export class ResourceHelper {
             }
         }
         return result as object;
-    }
-
-    static getClassName(obj: any): string {
-        const funcNameRegex = /function (.+?)\(/;
-        const results = (funcNameRegex).exec(obj.constructor.toString());
-        return (results && results.length > 1) ? results[1] : '';
-    }
-
-    static className(objProto: any): string[] {
-        const classNames = [];
-        let obj = Object.getPrototypeOf(objProto);
-
-        while (ResourceHelper.getClassName(obj) !== 'Object') {
-            classNames.push(ResourceHelper.getClassName(obj));
-            obj = Object.getPrototypeOf(obj);
-        }
-
-        return classNames;
     }
 
     static instantiateResourceCollection<T extends Resource>(type: new() => T, payload: any,
@@ -208,41 +136,6 @@ export class ResourceHelper {
         return entity;
     }
 
-    static setProxyUri(proxyUri: string) {
-        ResourceHelper.proxyUri = proxyUri;
-    }
-
-    static setRootUri(rootUri: string) {
-        ResourceHelper.rootUri = rootUri;
-    }
-
-    public static getURL(): string {
-        return ResourceHelper.proxyUri && ResourceHelper.proxyUri !== '' ?
-            ResourceHelper.addSlash(ResourceHelper.proxyUri) :
-            ResourceHelper.addSlash(ResourceHelper.rootUri);
-    }
-
-    private static addSlash(uri: string): string {
-        const uriParsed = url.parse(uri);
-        if (Utils.isNullOrUndefined(uriParsed.search) && uri && uri[uri.length - 1] !== '/') {
-            return uri + '/';
-        }
-        return uri;
-    }
-
-    public static getProxy(scrUrl: string): string {
-        if (!ResourceHelper.proxyUri || ResourceHelper.proxyUri === '') {
-            return ResourceHelper.removeUrlTemplateVars(scrUrl);
-        }
-        return ResourceHelper.addSlash(
-            ResourceHelper.removeUrlTemplateVars(scrUrl)
-                .replace(ResourceHelper.rootUri, ResourceHelper.proxyUri));
-    }
-
-    public static removeUrlTemplateVars(srcUrl: string) {
-        return srcUrl.replace(ResourceHelper.URL_TEMPLATE_VAR_REGEXP, ResourceHelper.EMPTY_STRING);
-    }
-
     public static setHttp(http: HttpClient) {
         this.http = http;
     }
@@ -251,7 +144,4 @@ export class ResourceHelper {
         return this.http;
     }
 
-    static getRootUri() {
-        return this.rootUri;
-    }
 }

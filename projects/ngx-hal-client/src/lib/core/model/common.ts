@@ -1,11 +1,6 @@
 import { Resource } from './resource';
 import { Sort } from './interface/sort';
 
-export interface ResourceExpire<T extends Resource> {
-    entity: any;
-    expire: number;
-}
-
 export interface HalParam {
     key: string;
     value: Resource | string | number | boolean;
