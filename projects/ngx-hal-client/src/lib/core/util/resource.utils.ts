@@ -9,7 +9,7 @@ import { EmbeddedResource } from '../model/embedded-resource';
 
 export class ResourceUtils {
 
-    static resolveRelations(resource: Resource, options?: Array<ResourceOptions> | Include): object {
+    public static resolveRelations(resource: Resource, options?: Array<ResourceOptions> | Include): object {
         const result: any = {};
         for (const key in resource) {
             if (resource[key] == null && options) {
@@ -55,8 +55,9 @@ export class ResourceUtils {
         return result as object;
     }
 
-    static instantiateResourceCollection<T extends Resource>(type: new() => T, payload: any,
-                                                             result: ResourceArray<T>, builder?: SubTypeBuilder): ResourceArray<T> {
+    public static instantiateResourceCollection<T extends Resource>(type: new() => T, payload: any,
+                                                                    result: ResourceArray<T>,
+                                                                    builder?: SubTypeBuilder): ResourceArray<T> {
         if (payload[result._embedded]) {
             for (const embeddedClassName of Object.keys(payload[result._embedded])) {
                 const embedded: any = payload[result._embedded];
@@ -81,10 +82,11 @@ export class ResourceUtils {
         result.prevUri = payload._links && payload._links.prev ? payload._links.prev.href : undefined;
         result.firstUri = payload._links && payload._links.first ? payload._links.first.href : undefined;
         result.lastUri = payload._links && payload._links.last ? payload._links.last.href : undefined;
+
         return result;
     }
 
-    static searchSubtypes<T extends Resource>(builder: SubTypeBuilder, embeddedClassName: string, instance: T) {
+    public static searchSubtypes<T extends Resource>(builder: SubTypeBuilder, embeddedClassName: string, instance: T) {
         if (builder && builder.subtypes) {
             const keys = builder.subtypes.keys();
             Array.from(keys).forEach((subtypeKey: string) => {
@@ -97,18 +99,18 @@ export class ResourceUtils {
         return instance;
     }
 
-    static instantiateResource<T extends BaseResource>(entity: T, payload: any): T {
+    public static instantiateResource<T extends BaseResource>(entity: T, payload: any): T {
         for (const key of Object.keys(payload)) {
             if (payload[key] instanceof Array) {
                 for (let i = 0; i < payload[key].length; i++) {
                     if (isEmbeddedResource(payload[key][i])) {
                         // TODO: check that it's work
-                        payload[key][i] = ResourceUtils.createResource(new EmbeddedResource(), payload[key][i]);
+                        payload[key][i] = ResourceUtils.createResource({} as EmbeddedResource, payload[key][i]);
                     }
                 }
             } else if (isEmbeddedResource(payload[key])) {
                 // TODO: check that it's work
-                payload[key] = ResourceUtils.createResource(new EmbeddedResource(), payload[key]);
+                payload[key] = ResourceUtils.createResource({} as EmbeddedResource, payload[key]);
             }
         }
 
@@ -116,7 +118,7 @@ export class ResourceUtils {
     }
 
     private static createResource<T extends BaseResource>(entity: T, payload: any): T {
-        for (const p in payload) {
+        for (const p of payload) {
             entity[p] = payload[p];
         }
         return entity;
