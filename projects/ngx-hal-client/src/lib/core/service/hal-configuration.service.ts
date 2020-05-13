@@ -3,6 +3,8 @@ import { DependencyInjector } from '../util/dependency-injector';
 import { HalConfiguration } from '../config/hal-configuration.interface';
 import { CacheHelper } from '../cache/cache.helper';
 import { HttpConfigService } from './http-config.service';
+import { ResourceUtils } from '../util/resource.utils';
+import { EmbeddedResource } from '../model/embedded-resource';
 
 @Injectable()
 export class HalConfigurationService {
@@ -11,6 +13,7 @@ export class HalConfigurationService {
                 private httpConfig: HttpConfigService) {
         DependencyInjector.injector = injector;
         CacheHelper.initClearCacheProcess();
+        ResourceUtils.withEmbeddedResourceType(EmbeddedResource);
     }
 
     public configure(config: HalConfiguration): void {
