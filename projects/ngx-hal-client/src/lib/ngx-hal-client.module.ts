@@ -3,6 +3,7 @@ import { ModuleWithProviders, NgModule } from '@angular/core';
 import { ResourceService } from './core/service/resource.service';
 import { HalConfigurationService } from './core/service/hal-configuration.service';
 import { HttpConfigService } from './core/service/http-config.service';
+import { ResourceClientService } from './core/service/resource-client.service';
 
 export { CacheHelper } from './core/cache/cache.helper';
 export { RestService } from './core/service/rest.service';
@@ -23,8 +24,9 @@ export { HalConfigurationService } from './core/service/hal-configuration.servic
     declarations: [],
     exports: [HttpClientModule],
     providers: [
-        HttpConfigService,
         HttpClient,
+        HttpConfigService,
+        ResourceClientService,
         {
             provide: ResourceService,
             useClass: ResourceService,

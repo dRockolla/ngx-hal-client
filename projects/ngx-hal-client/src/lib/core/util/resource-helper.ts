@@ -1,4 +1,4 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpHeaders } from '@angular/common/http';
 import { BaseResource } from '../model/base-resource';
 import { Include, ResourceOptions } from '../model/common';
 import { isEmbeddedResource } from '../model/defenition';
@@ -6,16 +6,17 @@ import { SubTypeBuilder } from '../model/interface/subtype-builder';
 import { Resource } from '../model/resource';
 import { ResourceArray } from '../model/resource-array';
 import { ObjectUtils } from './object.utils';
+import { EmbeddedResource } from '../model/embedded-resource';
 
 export class ResourceHelper {
 
     private static _headers: HttpHeaders;
-    private static http: HttpClient;
 
     public static get headers(): HttpHeaders {
         if (ObjectUtils.isNullOrUndefined(this._headers)) {
             this._headers = new HttpHeaders();
         }
+        console.log(this._headers)
         return this._headers;
     }
 
@@ -117,12 +118,12 @@ export class ResourceHelper {
                 for (let i = 0; i < payload[key].length; i++) {
                     if (isEmbeddedResource(payload[key][i])) {
                         // TODO: check that it's work
-                        payload[key][i] = ResourceHelper.createResource(payload, payload[key][i]);
+                        payload[key][i] = ResourceHelper.createResource(new EmbeddedResource(), payload[key][i]);
                     }
                 }
             } else if (isEmbeddedResource(payload[key])) {
                 // TODO: check that it's work
-                payload[key] = ResourceHelper.createResource(payload, payload[key]);
+                payload[key] = ResourceHelper.createResource(new EmbeddedResource(), payload[key]);
             }
         }
 
@@ -134,14 +135,6 @@ export class ResourceHelper {
             entity[p] = payload[p];
         }
         return entity;
-    }
-
-    public static setHttp(http: HttpClient) {
-        this.http = http;
-    }
-
-    public static getHttp(): HttpClient {
-        return this.http;
     }
 
 }

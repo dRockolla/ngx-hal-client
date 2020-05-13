@@ -14,6 +14,7 @@ import { HttpConfigService } from '../service/http-config.service';
 import { DependencyInjector } from '../util/dependency-injector';
 import { UrlUtils } from '../util/url.utils';
 import { ObjectUtils } from '../util/object.utils';
+import { ResourceClientService } from '../service/resource-client.service';
 
 export interface Link {
     href: string;
@@ -26,16 +27,15 @@ export interface Links {
 
 export abstract class BaseResource {
 
-    public proxyUrl: string;
-
-    public rootUrl: string;
-
     public _links: Links;
 
     private httpConfig: HttpConfigService;
 
+    private resourceClientService: ResourceClientService;
+
     constructor() {
         this.httpConfig = DependencyInjector.get(HttpConfigService);
+        this.resourceClientService = DependencyInjector.get(ResourceClientService);
     }
 
 // Get related resource
@@ -50,8 +50,8 @@ export abstract class BaseResource {
                 return observableOf(CacheHelper.get(this.getRelationLinkHref(relation)));
             }
 
-            const observable = ResourceHelper.getHttp()
-                .get(this.httpConfig.getProxy(this.getRelationLinkHref(relation)),
+            const observable =
+                this.resourceClientService.getResource(this.getRelationLinkHref(relation),
                     {headers: ResourceHelper.headers});
             return observable.pipe(map((data: any) => {
                 if (builder) {
@@ -80,22 +80,22 @@ export abstract class BaseResource {
                                              projectionName: string,
                                              expireMs: number = CacheHelper.defaultExpire,
                                              isCacheActive: boolean = true): Observable<Resource> {
-        const uri = this.getResourceUrl(resource).concat('/', id).concat('?projection=' + projectionName);
+        const uri = this.resourceClientService.generateResourceUrl(resource).concat('/', id).concat('?projection=' + projectionName);
         const result: T = new type();
 
         if (CacheHelper.ifPresent(uri, null, null, isCacheActive)) {
             return observableOf(CacheHelper.get(uri));
         }
 
-        const observable = ResourceHelper.getHttp().get(uri, {headers: ResourceHelper.headers});
-        return observable.pipe(
-            map(data => {
-                const filledResource: T = ResourceHelper.instantiateResource(result, data);
-                CacheHelper.put(uri, filledResource, expireMs);
-                return filledResource;
-            }),
-            catchError(error => observableThrowError(error))
-        );
+        return this.resourceClientService.getResource(uri, {headers: ResourceHelper.headers})
+            .pipe(
+                map(data => {
+                    const filledResource: T = ResourceHelper.instantiateResource(result, data);
+                    CacheHelper.put(uri, filledResource, expireMs);
+                    return filledResource;
+                }),
+                catchError(error => observableThrowError(error))
+            );
     }
 
     // Get collection of related resources
@@ -116,16 +116,16 @@ export abstract class BaseResource {
 
             // Use this obj to clear relation url from any http params template because we will pass params in request
             const urlAsObj = new URL(this.getRelationLinkHref(relation));
-            const observable = ResourceHelper.getHttp()
-                .get(this.httpConfig.getProxy(`${ urlAsObj.origin }${ urlAsObj.pathname }`), {
+            return this.resourceClientService.getResource(`${ urlAsObj.origin }${ urlAsObj.pathname }`,
+                {
                     headers: ResourceHelper.headers,
                     params: httpParams
-                });
-            return observable
+                })
                 .pipe(
                     map(response => ResourceHelper.instantiateResourceCollection<T>(type, response, result, builder)),
                     catchError(error => observableThrowError(error))
-                ).pipe(map((array: ResourceArray<T>) => {
+                )
+                .pipe(map((array: ResourceArray<T>) => {
                     CacheHelper.putArray(this.getRelationLinkHref(relation), array.result, expireMs);
                     return array.result;
                 }));
@@ -139,21 +139,20 @@ export abstract class BaseResource {
                                                   projectionName: string,
                                                   expireMs: number = CacheHelper.defaultExpire,
                                                   isCacheActive: boolean = true): Observable<T[]> {
-        const uri = this.getResourceUrl(resource).concat('?projection=' + projectionName);
+        const uri = this.resourceClientService.generateResourceUrl(resource).concat('?projection=' + projectionName);
         const result: ResourceArray<T> = new ResourceArray<T>('_embedded');
 
         if (CacheHelper.ifPresent(uri, null, null, isCacheActive)) {
             return observableOf(CacheHelper.getArray(uri));
         }
-
-        const observable = ResourceHelper.getHttp().get(uri, {headers: ResourceHelper.headers});
-        return observable.pipe(
-            map(response => ResourceHelper.instantiateResourceCollection<T>(type, response, result)),
-            map((array: ResourceArray<T>) => {
-                CacheHelper.putArray(uri, array.result, expireMs);
-                return array.result;
-            })
-        );
+        return this.resourceClientService.getResource(uri, {headers: ResourceHelper.headers})
+            .pipe(
+                map(response => ResourceHelper.instantiateResourceCollection<T>(type, response, result)),
+                map((array: ResourceArray<T>) => {
+                    CacheHelper.putArray(uri, array.result, expireMs);
+                    return array.result;
+                })
+            );
     }
 
     // Adds the given resource to the bound collection by the relation
@@ -162,9 +161,8 @@ export abstract class BaseResource {
             return observableThrowError('no relation found');
         }
         const header = ResourceHelper.headers.append('Content-Type', 'text/uri-list');
-        return ResourceHelper.getHttp()
-            .put(this.httpConfig.getProxy(this.getRelationLinkHref(relation)),
-                resource._links.self.href, {headers: header});
+        return this.resourceClientService.putResource(this.getRelationLinkHref(relation),
+            resource._links.self.href, {headers: header});
     }
 
     // Bind the given resource to this resource by the given relation
@@ -175,9 +173,8 @@ export abstract class BaseResource {
         const header = ResourceHelper.headers.append('Content-Type', 'text/uri-list');
         CacheHelper.evictEntityLink(this.getRelationLinkHref(relation));
 
-        return ResourceHelper.getHttp()
-            .patch(this.httpConfig.getProxy(this.getRelationLinkHref(relation)),
-                resource._links.self.href, {headers: header});
+        return this.resourceClientService.patchResource(this.getRelationLinkHref(relation),
+            resource._links.self.href, {headers: header});
     }
 
     // Bind the given resource to this resource by the given relation
@@ -188,9 +185,8 @@ export abstract class BaseResource {
         const header = ResourceHelper.headers.append('Content-Type', 'text/uri-list');
 
         CacheHelper.evictEntityLink(this.getRelationLinkHref(relation));
-        return ResourceHelper.getHttp()
-            .put(this.httpConfig.getProxy(this.getRelationLinkHref(relation)),
-                resource._links.self.href, {headers: header});
+        return this.resourceClientService.putResource(this.getRelationLinkHref(relation),
+            resource._links.self.href, {headers: header});
     }
 
     // Unbind the resource with the given relation from this resource
@@ -208,8 +204,8 @@ export abstract class BaseResource {
         const relationId: string = link.substring(idx);
         CacheHelper.evictEntityLink(this.getRelationLinkHref(relation) + '/' + relationId);
 
-        return ResourceHelper.getHttp()
-            .delete(this.httpConfig.getProxy(this.getRelationLinkHref(relation) + '/' + relationId),
+        return this.resourceClientService
+            .deleteResource(this.getRelationLinkHref(relation) + '/' + relationId,
                 {headers: ResourceHelper.headers});
     }
 
@@ -226,8 +222,7 @@ export abstract class BaseResource {
                 const uriTemplate = uriTemplates(this._links[relation].href);
                 const url = uriTemplate.fillFromObject(options.params);
 
-                return ResourceHelper.getHttp()
-                    .post(this.httpConfig.getProxy(url), body)
+                return this.resourceClientService.postResource(url, body)
                     .pipe(
                         map(data => ResourceHelper.instantiateResource(ObjectUtils.clone(this), data))
                     );
@@ -236,20 +231,17 @@ export abstract class BaseResource {
             const httpParams = UrlUtils.linkParamsToHttpParams(options.params);
             CacheHelper.evictEntityLink(this.getRelationLinkHref(relation));
 
-            return ResourceHelper.getHttp()
-                .post(this.httpConfig.getProxy(this.getRelationLinkHref(relation)), body,
-                    {
-                        params: httpParams
-                    }
-                )
+            return this.resourceClientService.postResource(this.getRelationLinkHref(relation), body,
+                {
+                    params: httpParams
+                })
                 .pipe(
                     map(data => ResourceHelper.instantiateResource(ObjectUtils.clone(this), data))
                 );
         }
         CacheHelper.evictEntityLink(this.getRelationLinkHref(relation));
 
-        return ResourceHelper.getHttp()
-            .post(this.httpConfig.getProxy(this.getRelationLinkHref(relation)), body)
+        return this.resourceClientService.postResource(this.getRelationLinkHref(relation), body)
             .pipe(
                 map(data => ResourceHelper.instantiateResource(ObjectUtils.clone(this), data))
             );
@@ -268,8 +260,7 @@ export abstract class BaseResource {
                 const uriTemplate = uriTemplates(this._links[relation].href);
                 const url = uriTemplate.fillFromObject(options.params);
 
-                return ResourceHelper.getHttp()
-                    .patch(this.httpConfig.getProxy(url), body)
+                return this.resourceClientService.patchResource(url, body)
                     .pipe(
                         map(data => ResourceHelper.instantiateResource(ObjectUtils.clone(this), data))
                     );
@@ -278,19 +269,16 @@ export abstract class BaseResource {
             const httpParams = UrlUtils.linkParamsToHttpParams(options.params);
             CacheHelper.evictEntityLink(this.getRelationLinkHref(relation));
 
-            return ResourceHelper.getHttp()
-                .patch(this.httpConfig.getProxy(this.getRelationLinkHref(relation)), body,
-                    {
-                        params: httpParams
-                    }
-                )
+            return this.resourceClientService.patchResource(this.getRelationLinkHref(relation), body,
+                {
+                    params: httpParams
+                })
                 .pipe(
                     map(data => ResourceHelper.instantiateResource(ObjectUtils.clone(this), data))
                 );
         }
 
-        return ResourceHelper.getHttp()
-            .patch(this.httpConfig.getProxy(this.getRelationLinkHref(relation)), body)
+        return this.resourceClientService.patchResource(this.getRelationLinkHref(relation), body)
             .pipe(
                 map(data => ResourceHelper.instantiateResource(ObjectUtils.clone(this), data))
             );
@@ -305,19 +293,6 @@ export abstract class BaseResource {
             return UrlUtils.removeUrlTemplateVars(this._links[relation].href);
         }
         return this._links[relation].href;
-    }
-
-    protected getResourceUrl(resource?: string): string {
-        let url = this.httpConfig.getURL();
-        if (!url.endsWith('/')) {
-            url = url.concat('/');
-        }
-        if (resource) {
-            return url.concat(resource);
-        }
-
-        url = url.replace('{?projection}', '');
-        return url;
     }
 
 }

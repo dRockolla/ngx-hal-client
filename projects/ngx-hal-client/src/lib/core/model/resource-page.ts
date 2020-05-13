@@ -6,9 +6,9 @@ import { PageResult } from './interface/page-result';
 import { Sort } from './interface/sort';
 import { Resource } from './resource';
 import { ResourceArray } from './resource-array';
-import { HttpConfigService } from '../service/http-config.service';
 import { DependencyInjector } from '../util/dependency-injector';
 import { UrlUtils } from '../util/url.utils';
+import { ResourceClientService } from '../service/resource-client.service';
 
 /**
  * Object allow to work with paged resources.
@@ -30,7 +30,7 @@ export class ResourcePage<T extends Resource> {
 
     private resourceType: T;
 
-    private httpConfig: HttpConfigService;
+    private resourceClientService: ResourceClientService;
 
     constructor(resourceArray?: ResourceArray<T>) {
         if (resourceArray) {
@@ -44,7 +44,7 @@ export class ResourcePage<T extends Resource> {
             this.totalElements = resourceArray.totalElements;
             this.pageNumber = resourceArray.pageNumber;
         }
-        this.httpConfig = DependencyInjector.get(HttpConfigService)
+        this.resourceClientService = DependencyInjector.get(ResourceClientService);
     }
 
     init(result: PageResult<T>): ResourcePage<T> {
@@ -116,7 +116,7 @@ export class ResourcePage<T extends Resource> {
         const uri = UrlUtils.removeUrlTemplateVars(this.selfUri);
         let httpParams = new HttpParams({fromString: uri});
         sort.forEach((s: Sort) => {
-            httpParams = httpParams.append('sort', `${s.path},${s.order}`);
+            httpParams = httpParams.append('sort', `${ s.path },${ s.order }`);
         });
 
         return this.doRequest(httpParams.toString());
@@ -124,13 +124,13 @@ export class ResourcePage<T extends Resource> {
 
     private doRequest(uri: string): Observable<ResourcePage<T>> {
         if (uri) {
-            return ResourceHelper.getHttp().get(this.httpConfig.getProxy(uri),
+            return this.resourceClientService.getResource(uri,
                 {headers: ResourceHelper.headers})
                 .pipe(
                     map((response: PageResult<T>) => this.init(response)),
                     catchError(error => observableThrowError(error)));
         }
-        return observableThrowError(`no ${uri} link defined`);
+        return observableThrowError(`no ${ uri } link defined`);
     }
 
 }

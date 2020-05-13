@@ -14,11 +14,13 @@ import { CustomEncoder } from '../util/custom-encoder';
 import { ResourceHelper } from '../util/resource-helper';
 import { HttpConfigService } from './http-config.service';
 import { UrlUtils } from '../util/url.utils';
+import { ResourceClientService } from './resource-client.service';
 
 @Injectable()
 export class ResourceService {
 
-    constructor(private httpConfig: HttpConfigService) {
+    constructor(private httpConfig: HttpConfigService,
+                private resourceClientService: ResourceClientService) {
     }
 
     public getAll<T extends Resource>(type: new() => T,
@@ -26,25 +28,29 @@ export class ResourceService {
                                       embedded: string,
                                       options?: HalOptions,
                                       subType?: SubTypeBuilder): Observable<ResourceArray<T>> {
-        const uri = this.getResourceUrl(resource);
+        const uri = this.resourceClientService.generateResourceUrl(resource);
         const httpParams = UrlUtils.optionParams(new HttpParams({encoder: new CustomEncoder()}), options);
         const result: ResourceArray<T> = new ResourceArray<T>(embedded);
 
-        this.setUrls(result);
         result.sortInfo = options ? options.sort : undefined;
-        const observable = ResourceHelper.getHttp().get(uri, {headers: ResourceHelper.headers, params: httpParams});
+        const observable = this.resourceClientService.getResource(uri, {
+            headers: ResourceHelper.headers,
+            params: httpParams
+        });
         return observable.pipe(
             map(response => ResourceHelper.instantiateResourceCollection(type, response, result, subType)),
             catchError(error => observableThrowError(error)));
     }
 
     public get<T extends Resource>(type: new() => T, resource: string, id: any, params?: HalParam[]): Observable<T> {
-        const uri = this.getResourceUrl(resource).concat('/', id);
+        const uri = this.resourceClientService.generateResourceUrl(resource).concat('/', id);
         const result: T = new type();
         const httpParams = UrlUtils.params(new HttpParams(), params);
 
-        this.setUrlsResource(result);
-        const observable = ResourceHelper.getHttp().get(uri, {headers: ResourceHelper.headers, params: httpParams});
+        const observable = this.resourceClientService.getResource(uri, {
+            headers: ResourceHelper.headers,
+            params: httpParams
+        });
         return observable.pipe(map(data => ResourceHelper.instantiateResource(result, data)),
             catchError(error => observableThrowError(error)));
     }
@@ -52,31 +58,35 @@ export class ResourceService {
     public getBySelfLink<T extends Resource>(type: new() => T, resourceLink: string): Observable<T> {
         const result: T = new type();
 
-        this.setUrlsResource(result);
-        const observable = ResourceHelper.getHttp().get(this.httpConfig.getProxy(resourceLink), {headers: ResourceHelper.headers});
+        const observable = this.resourceClientService.getResource(resourceLink,
+            {headers: ResourceHelper.headers});
         return observable.pipe(map(data => ResourceHelper.instantiateResource(result, data)),
             catchError(error => observableThrowError(error)));
     }
 
     public search<T extends Resource>(type: new() => T, query: string, resource: string, embedded: string, options?: HalOptions,
                                       subType?: SubTypeBuilder): Observable<ResourceArray<T>> {
-        const uri = this.getResourceUrl(resource).concat('/search/', query);
+        const uri = this.resourceClientService.generateResourceUrl(resource).concat('/search/', query);
         const httpParams = UrlUtils.optionParams(new HttpParams({encoder: new CustomEncoder()}), options);
         const result: ResourceArray<T> = new ResourceArray<T>(embedded);
 
-        this.setUrls(result);
-        const observable = ResourceHelper.getHttp().get(uri, {headers: ResourceHelper.headers, params: httpParams});
+        const observable = this.resourceClientService.getResource(uri, {
+            headers: ResourceHelper.headers,
+            params: httpParams
+        });
         return observable.pipe(map(response => ResourceHelper.instantiateResourceCollection(type, response, result, subType)),
             catchError(error => observableThrowError(error)));
     }
 
     public searchSingle<T extends Resource>(type: new() => T, query: string, resource: string, options?: HalOptions): Observable<T> {
-        const uri = this.getResourceUrl(resource).concat('/search/', query);
+        const uri = this.resourceClientService.generateResourceUrl(resource).concat('/search/', query);
         const httpParams = UrlUtils.optionParams(new HttpParams({encoder: new CustomEncoder()}), options);
         const result: T = new type();
 
-        this.setUrlsResource(result);
-        const observable = ResourceHelper.getHttp().get(uri, {headers: ResourceHelper.headers, params: httpParams});
+        const observable = this.resourceClientService.getResource(uri, {
+            headers: ResourceHelper.headers,
+            params: httpParams
+        });
         return observable.pipe(map(response => ResourceHelper.instantiateResource(result, response)),
             catchError(error => observableThrowError(error)));
     }
@@ -87,12 +97,14 @@ export class ResourceService {
                                            embedded: string,
                                            options?: HalOptions,
                                            subType?: SubTypeBuilder): Observable<ResourceArray<T>> {
-        const uri = this.getResourceUrl(resource + query);
+        const uri = this.resourceClientService.generateResourceUrl(resource + query);
         const httpParams = UrlUtils.optionParams(new HttpParams({encoder: new CustomEncoder()}), options);
         const result: ResourceArray<T> = new ResourceArray<T>(embedded);
 
-        this.setUrls(result);
-        const observable = ResourceHelper.getHttp().get(uri, {headers: ResourceHelper.headers, params: httpParams});
+        const observable = this.resourceClientService.getResource(uri, {
+            headers: ResourceHelper.headers,
+            params: httpParams
+        });
         return observable.pipe(map(response => ResourceHelper.instantiateResourceCollection(type, response, result, subType)),
             catchError(error => observableThrowError(error)));
     }
@@ -100,12 +112,11 @@ export class ResourceService {
     public customQueryPost<T extends Resource>(type: new() => T, query: string, resource: string,
                                                embedded: string, options?: HalOptions, body?: any,
                                                subType?: SubTypeBuilder): Observable<ResourceArray<T>> {
-        const uri = this.getResourceUrl(resource + query);
+        const uri = this.resourceClientService.generateResourceUrl(resource + query);
         const httpParams = UrlUtils.optionParams(new HttpParams(), options);
         const result: ResourceArray<T> = new ResourceArray<T>(embedded);
 
-        this.setUrls(result);
-        const observable = ResourceHelper.getHttp().post(uri, body, {
+        const observable = this.resourceClientService.postResource(uri, body, {
             headers: ResourceHelper.headers,
             params: httpParams
         });
@@ -116,8 +127,7 @@ export class ResourceService {
     public getByRelation<T extends Resource>(type: new() => T, resourceLink: string): Observable<T> {
         const result: T = new type();
 
-        this.setUrlsResource(result);
-        const observable = ResourceHelper.getHttp().get(resourceLink, {headers: ResourceHelper.headers});
+        const observable = this.resourceClientService.getResource(resourceLink, {headers: ResourceHelper.headers});
         return observable.pipe(map(data => ResourceHelper.instantiateResource(result, data)),
             catchError(error => observableThrowError(error)));
     }
@@ -128,8 +138,7 @@ export class ResourceService {
                                                   builder?: SubTypeBuilder): Observable<ResourceArray<T>> {
         const result: ResourceArray<T> = new ResourceArray<T>(embedded);
 
-        this.setUrls(result);
-        const observable = ResourceHelper.getHttp().get(resourceLink, {headers: ResourceHelper.headers});
+        const observable = this.resourceClientService.getResource(resourceLink, {headers: ResourceHelper.headers});
         return observable.pipe(
             map(response => ResourceHelper.instantiateResourceCollection(type, response, result, builder)),
             catchError(error => observableThrowError(error))
@@ -140,10 +149,10 @@ export class ResourceService {
                                              resource: string,
                                              id: string,
                                              projectionName: string): Observable<T> {
-        const uri = this.getResourceUrl(resource).concat('/', id).concat('?projection=' + projectionName);
+        const uri = this.resourceClientService.generateResourceUrl(resource).concat('/', id).concat('?projection=' + projectionName);
         const result: T = new type();
 
-        const observable = ResourceHelper.getHttp().get(uri, {headers: ResourceHelper.headers});
+        const observable = this.resourceClientService.getResource(uri, {headers: ResourceHelper.headers});
         return observable.pipe(
             map(data => ResourceHelper.instantiateResource(result, data)),
             catchError(error => observableThrowError(error))
@@ -153,10 +162,10 @@ export class ResourceService {
     public getProjectionArray<T extends Resource>(type: new() => T,
                                                   resource: string,
                                                   projectionName: string): Observable<T[]> {
-        const uri = this.getResourceUrl(resource).concat('?projection=' + projectionName);
+        const uri = this.resourceClientService.generateResourceUrl(resource).concat('?projection=' + projectionName);
         const result: ResourceArray<T> = new ResourceArray<T>('_embedded');
 
-        const observable = ResourceHelper.getHttp().get(uri, {headers: ResourceHelper.headers});
+        const observable = this.resourceClientService.getResource(uri, {headers: ResourceHelper.headers});
         return observable
             .pipe(
                 map(response => ResourceHelper.instantiateResourceCollection<T>(type, response, result)),
@@ -167,10 +176,11 @@ export class ResourceService {
     }
 
     public count(resource: string, query?: string, options?: HalOptions): Observable<number> {
-        const uri = this.getResourceUrl(resource).concat('/search/' + (query === undefined ? 'countAll' : query));
+        const uri = this.resourceClientService.generateResourceUrl(resource)
+            .concat('/search/' + (query === undefined ? 'countAll' : query));
         const httpParams = UrlUtils.optionParams(new HttpParams(), options);
 
-        return ResourceHelper.getHttp().get(uri, {
+        return this.resourceClientService.getResource(uri, {
             headers: ResourceHelper.headers,
             observe: 'response',
             params: httpParams
@@ -183,8 +193,7 @@ export class ResourceService {
         const uri = this.httpConfig.getURL() + selfResource;
         const payload = ResourceHelper.resolveRelations(entity);
 
-        this.setUrlsResource(entity);
-        const observable = ResourceHelper.getHttp().post(uri, payload, {
+        const observable = this.resourceClientService.postResource(uri, payload, {
             headers: ResourceHelper.headers,
             observe: 'response'
         });
@@ -200,10 +209,9 @@ export class ResourceService {
 
     public update<T extends Resource>(entity: T) {
         CacheHelper.evictEntityLinks(entity);
-        const uri = this.httpConfig.getProxy(entity._links.self.href);
+        const uri = entity._links.self.href;
         const payload = ResourceHelper.resolveRelations(entity);
-        this.setUrlsResource(entity);
-        const observable = ResourceHelper.getHttp().put(uri, payload, {
+        const observable = this.resourceClientService.putResource(uri, payload, {
             headers: ResourceHelper.headers,
             observe: 'response'
         });
@@ -219,10 +227,9 @@ export class ResourceService {
 
     public patch<T extends Resource>(entity: T, options?: Array<ResourceOptions> | Include) {
         CacheHelper.evictEntityLinks(entity);
-        const uri = this.httpConfig.getProxy(entity._links.self.href);
+        const uri = entity._links.self.href;
         const payload = ResourceHelper.resolveRelations(entity, options);
-        this.setUrlsResource(entity);
-        const observable = ResourceHelper.getHttp().patch(uri, payload, {
+        const observable = this.resourceClientService.patchResource(uri, payload, {
             headers: ResourceHelper.headers,
             observe: 'response'
         });
@@ -238,9 +245,8 @@ export class ResourceService {
 
     public delete<T extends Resource>(entity: T): Observable<object> {
         CacheHelper.evictEntityLinks(entity);
-        const uri = this.httpConfig.getProxy(entity._links.self.href);
-        return ResourceHelper.getHttp()
-            .delete(uri, {headers: ResourceHelper.headers})
+        const uri = entity._links.self.href;
+        return this.resourceClientService.deleteResource(uri, {headers: ResourceHelper.headers})
             .pipe(catchError(error => observableThrowError(error)));
     }
 
@@ -290,26 +296,4 @@ export class ResourceService {
         return resourceArray.size(type, size);
     }
 
-    private getResourceUrl(resource?: string): string {
-        let url: string = this.httpConfig.getURL();
-        if (!url.endsWith('/')) {
-            url = url.concat('/');
-        }
-        if (resource) {
-            return url.concat(resource);
-        }
-
-        url = url.replace('{?projection}', '');
-        return url;
-    }
-
-    private setUrls<T extends Resource>(result: ResourceArray<T>) {
-        result.proxyUrl = this.httpConfig.proxyUri;
-        result.rootUrl = this.httpConfig.rootUri;
-    }
-
-    private setUrlsResource<T extends Resource>(result: T) {
-        result.proxyUrl = this.httpConfig.proxyUri;
-        result.rootUrl = this.httpConfig.rootUri;
-    }
 }
