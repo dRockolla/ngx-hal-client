@@ -29,9 +29,9 @@ export abstract class BaseResource {
 
     public _links: Links;
 
-    private httpConfig: HttpConfigService;
+    protected resourceClientService: ResourceClientService;
 
-    private resourceClientService: ResourceClientService;
+    private httpConfig: HttpConfigService;
 
     constructor() {
         this.httpConfig = DependencyInjector.get(HttpConfigService);
@@ -51,8 +51,7 @@ export abstract class BaseResource {
             }
 
             const observable =
-                this.resourceClientService.getResource(this.getRelationLinkHref(relation),
-                    {headers: ResourceHelper.headers});
+                this.resourceClientService.getResource(this.getRelationLinkHref(relation));
             return observable.pipe(map((data: any) => {
                 if (builder) {
                     for (const embeddedClassName of Object.keys(data._links)) {
@@ -87,7 +86,7 @@ export abstract class BaseResource {
             return observableOf(CacheHelper.get(uri));
         }
 
-        return this.resourceClientService.getResource(uri, {headers: ResourceHelper.headers})
+        return this.resourceClientService.getResource(uri)
             .pipe(
                 map(data => {
                     const filledResource: T = ResourceHelper.instantiateResource(result, data);
@@ -118,7 +117,6 @@ export abstract class BaseResource {
             const urlAsObj = new URL(this.getRelationLinkHref(relation));
             return this.resourceClientService.getResource(`${ urlAsObj.origin }${ urlAsObj.pathname }`,
                 {
-                    headers: ResourceHelper.headers,
                     params: httpParams
                 })
                 .pipe(
@@ -145,7 +143,7 @@ export abstract class BaseResource {
         if (CacheHelper.ifPresent(uri, null, null, isCacheActive)) {
             return observableOf(CacheHelper.getArray(uri));
         }
-        return this.resourceClientService.getResource(uri, {headers: ResourceHelper.headers})
+        return this.resourceClientService.getResource(uri)
             .pipe(
                 map(response => ResourceHelper.instantiateResourceCollection<T>(type, response, result)),
                 map((array: ResourceArray<T>) => {
@@ -153,60 +151,6 @@ export abstract class BaseResource {
                     return array.result;
                 })
             );
-    }
-
-    // Adds the given resource to the bound collection by the relation
-    public addRelation<T extends Resource>(relation: string, resource: T): Observable<any> {
-        if (!this.existRelationLink(relation)) {
-            return observableThrowError('no relation found');
-        }
-        const header = ResourceHelper.headers.append('Content-Type', 'text/uri-list');
-        return this.resourceClientService.putResource(this.getRelationLinkHref(relation),
-            resource._links.self.href, {headers: header});
-    }
-
-    // Bind the given resource to this resource by the given relation
-    public updateRelation<T extends Resource>(relation: string, resource: T): Observable<any> {
-        if (!this.existRelationLink(relation)) {
-            return observableThrowError('no relation found');
-        }
-        const header = ResourceHelper.headers.append('Content-Type', 'text/uri-list');
-        CacheHelper.evictEntityLink(this.getRelationLinkHref(relation));
-
-        return this.resourceClientService.patchResource(this.getRelationLinkHref(relation),
-            resource._links.self.href, {headers: header});
-    }
-
-    // Bind the given resource to this resource by the given relation
-    public substituteRelation<T extends Resource>(relation: string, resource: T): Observable<any> {
-        if (!this.existRelationLink(relation)) {
-            return observableThrowError('no relation found');
-        }
-        const header = ResourceHelper.headers.append('Content-Type', 'text/uri-list');
-
-        CacheHelper.evictEntityLink(this.getRelationLinkHref(relation));
-        return this.resourceClientService.putResource(this.getRelationLinkHref(relation),
-            resource._links.self.href, {headers: header});
-    }
-
-    // Unbind the resource with the given relation from this resource
-    public deleteRelation<T extends Resource>(relation: string, resource: T): Observable<any> {
-        if (!this.existRelationLink(relation)) {
-            return observableThrowError('no relation found');
-        }
-        const link: string = resource._links.self.href;
-        const idx: number = link.lastIndexOf('/') + 1;
-
-        if (idx === -1) {
-            return observableThrowError('no relation found');
-        }
-
-        const relationId: string = link.substring(idx);
-        CacheHelper.evictEntityLink(this.getRelationLinkHref(relation) + '/' + relationId);
-
-        return this.resourceClientService
-            .deleteResource(this.getRelationLinkHref(relation) + '/' + relationId,
-                {headers: ResourceHelper.headers});
     }
 
     // Perform post request for relation with body and url params

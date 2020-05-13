@@ -72,7 +72,7 @@ export class ResourceArray<T extends Resource> implements ArrayInterface<T> {
 // Load next page
     next = (type: new() => T): Observable<ResourceArray<T>> => {
         if (this.nextUri) {
-            return this.resourceClientService.getResource(this.nextUri, {headers: ResourceHelper.headers})
+            return this.resourceClientService.getResource(this.nextUri)
                 .pipe(
                     map(response => this.init(type, response, this.sortInfo)),
                     catchError(error => observableThrowError(error)),);
@@ -82,7 +82,7 @@ export class ResourceArray<T extends Resource> implements ArrayInterface<T> {
 
     prev = (type: new() => T): Observable<ResourceArray<T>> => {
         if (this.prevUri) {
-            return this.resourceClientService.getResource(this.prevUri, {headers: ResourceHelper.headers}).pipe(
+            return this.resourceClientService.getResource(this.prevUri).pipe(
                 map(response => this.init(type, response, this.sortInfo)),
                 catchError(error => observableThrowError(error)),);
         }
@@ -93,7 +93,7 @@ export class ResourceArray<T extends Resource> implements ArrayInterface<T> {
 
     first = (type: new() => T): Observable<ResourceArray<T>> => {
         if (this.firstUri) {
-            return this.resourceClientService.getResource(this.firstUri, {headers: ResourceHelper.headers}).pipe(
+            return this.resourceClientService.getResource(this.firstUri).pipe(
                 map(response => this.init(type, response, this.sortInfo)),
                 catchError(error => observableThrowError(error)),);
         }
@@ -104,7 +104,7 @@ export class ResourceArray<T extends Resource> implements ArrayInterface<T> {
 
     last = (type: new() => T): Observable<ResourceArray<T>> => {
         if (this.lastUri) {
-            return this.resourceClientService.getResource(this.lastUri, {headers: ResourceHelper.headers}).pipe(
+            return this.resourceClientService.getResource(this.lastUri).pipe(
                 map(response => this.init(type, response, this.sortInfo)),
                 catchError(error => observableThrowError(error)),);
         }
@@ -124,7 +124,7 @@ export class ResourceArray<T extends Resource> implements ArrayInterface<T> {
         let uri = urlParsed.query ?
             this.httpConfig.getProxy(this.selfUri).replace(urlParsed.query, query) : this.httpConfig.getProxy(this.selfUri).concat(query);
         uri = this.addSortInfo(uri);
-        return this.resourceClientService.getResource(uri, {headers: ResourceHelper.headers}).pipe(
+        return this.resourceClientService.getResource(uri).pipe(
             map(response => this.init(type, response, this.sortInfo)),
             catchError(error => observableThrowError(error)),);
     };
@@ -138,7 +138,7 @@ export class ResourceArray<T extends Resource> implements ArrayInterface<T> {
         let uri = this.httpConfig.getProxy(this.selfUri)
             .concat('?', 'size=', this.pageSize.toString(), '&page=', this.pageNumber.toString());
         uri = this.addSortInfo(uri);
-        return this.resourceClientService.getResource(uri, {headers: ResourceHelper.headers}).pipe(
+        return this.resourceClientService.getResource(uri).pipe(
             map(response => this.init(type, response, sort)),
             catchError(error => observableThrowError(error)),);
     };
@@ -148,7 +148,7 @@ export class ResourceArray<T extends Resource> implements ArrayInterface<T> {
     size = (type: new() => T, size: number): Observable<ResourceArray<T>> => {
         let uri = this.httpConfig.getProxy(this.selfUri).concat('?', 'size=', size.toString());
         uri = this.addSortInfo(uri);
-        return this.resourceClientService.getResource(uri, {headers: ResourceHelper.headers}).pipe(
+        return this.resourceClientService.getResource(uri).pipe(
             map(response => this.init(type, response, this.sortInfo)),
             catchError(error => observableThrowError(error)),);
     };

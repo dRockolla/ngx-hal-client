@@ -1,7 +1,6 @@
 import { HttpParams } from '@angular/common/http';
 import { Observable, throwError as observableThrowError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { ResourceHelper } from '../util/resource-helper';
 import { PageResult } from './interface/page-result';
 import { Sort } from './interface/sort';
 import { Resource } from './resource';
@@ -124,8 +123,7 @@ export class ResourcePage<T extends Resource> {
 
     private doRequest(uri: string): Observable<ResourcePage<T>> {
         if (uri) {
-            return this.resourceClientService.getResource(uri,
-                {headers: ResourceHelper.headers})
+            return this.resourceClientService.getResource(uri)
                 .pipe(
                     map((response: PageResult<T>) => this.init(response)),
                     catchError(error => observableThrowError(error)));

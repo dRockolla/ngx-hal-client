@@ -34,7 +34,6 @@ export class ResourceService {
 
         result.sortInfo = options ? options.sort : undefined;
         const observable = this.resourceClientService.getResource(uri, {
-            headers: ResourceHelper.headers,
             params: httpParams
         });
         return observable.pipe(
@@ -48,7 +47,6 @@ export class ResourceService {
         const httpParams = UrlUtils.params(new HttpParams(), params);
 
         const observable = this.resourceClientService.getResource(uri, {
-            headers: ResourceHelper.headers,
             params: httpParams
         });
         return observable.pipe(map(data => ResourceHelper.instantiateResource(result, data)),
@@ -58,8 +56,7 @@ export class ResourceService {
     public getBySelfLink<T extends Resource>(type: new() => T, resourceLink: string): Observable<T> {
         const result: T = new type();
 
-        const observable = this.resourceClientService.getResource(resourceLink,
-            {headers: ResourceHelper.headers});
+        const observable = this.resourceClientService.getResource(resourceLink);
         return observable.pipe(map(data => ResourceHelper.instantiateResource(result, data)),
             catchError(error => observableThrowError(error)));
     }
@@ -71,7 +68,6 @@ export class ResourceService {
         const result: ResourceArray<T> = new ResourceArray<T>(embedded);
 
         const observable = this.resourceClientService.getResource(uri, {
-            headers: ResourceHelper.headers,
             params: httpParams
         });
         return observable.pipe(map(response => ResourceHelper.instantiateResourceCollection(type, response, result, subType)),
@@ -84,7 +80,6 @@ export class ResourceService {
         const result: T = new type();
 
         const observable = this.resourceClientService.getResource(uri, {
-            headers: ResourceHelper.headers,
             params: httpParams
         });
         return observable.pipe(map(response => ResourceHelper.instantiateResource(result, response)),
@@ -102,7 +97,6 @@ export class ResourceService {
         const result: ResourceArray<T> = new ResourceArray<T>(embedded);
 
         const observable = this.resourceClientService.getResource(uri, {
-            headers: ResourceHelper.headers,
             params: httpParams
         });
         return observable.pipe(map(response => ResourceHelper.instantiateResourceCollection(type, response, result, subType)),
@@ -117,7 +111,6 @@ export class ResourceService {
         const result: ResourceArray<T> = new ResourceArray<T>(embedded);
 
         const observable = this.resourceClientService.postResource(uri, body, {
-            headers: ResourceHelper.headers,
             params: httpParams
         });
         return observable.pipe(map(response => ResourceHelper.instantiateResourceCollection(type, response, result, subType)),
@@ -127,7 +120,7 @@ export class ResourceService {
     public getByRelation<T extends Resource>(type: new() => T, resourceLink: string): Observable<T> {
         const result: T = new type();
 
-        const observable = this.resourceClientService.getResource(resourceLink, {headers: ResourceHelper.headers});
+        const observable = this.resourceClientService.getResource(resourceLink);
         return observable.pipe(map(data => ResourceHelper.instantiateResource(result, data)),
             catchError(error => observableThrowError(error)));
     }
@@ -138,7 +131,7 @@ export class ResourceService {
                                                   builder?: SubTypeBuilder): Observable<ResourceArray<T>> {
         const result: ResourceArray<T> = new ResourceArray<T>(embedded);
 
-        const observable = this.resourceClientService.getResource(resourceLink, {headers: ResourceHelper.headers});
+        const observable = this.resourceClientService.getResource(resourceLink);
         return observable.pipe(
             map(response => ResourceHelper.instantiateResourceCollection(type, response, result, builder)),
             catchError(error => observableThrowError(error))
@@ -152,7 +145,7 @@ export class ResourceService {
         const uri = this.resourceClientService.generateResourceUrl(resource).concat('/', id).concat('?projection=' + projectionName);
         const result: T = new type();
 
-        const observable = this.resourceClientService.getResource(uri, {headers: ResourceHelper.headers});
+        const observable = this.resourceClientService.getResource(uri);
         return observable.pipe(
             map(data => ResourceHelper.instantiateResource(result, data)),
             catchError(error => observableThrowError(error))
@@ -165,7 +158,7 @@ export class ResourceService {
         const uri = this.resourceClientService.generateResourceUrl(resource).concat('?projection=' + projectionName);
         const result: ResourceArray<T> = new ResourceArray<T>('_embedded');
 
-        const observable = this.resourceClientService.getResource(uri, {headers: ResourceHelper.headers});
+        const observable = this.resourceClientService.getResource(uri);
         return observable
             .pipe(
                 map(response => ResourceHelper.instantiateResourceCollection<T>(type, response, result)),
@@ -181,7 +174,6 @@ export class ResourceService {
         const httpParams = UrlUtils.optionParams(new HttpParams(), options);
 
         return this.resourceClientService.getResource(uri, {
-            headers: ResourceHelper.headers,
             observe: 'response',
             params: httpParams
         }).pipe(
@@ -194,7 +186,6 @@ export class ResourceService {
         const payload = ResourceHelper.resolveRelations(entity);
 
         const observable = this.resourceClientService.postResource(uri, payload, {
-            headers: ResourceHelper.headers,
             observe: 'response'
         });
         return observable.pipe(map((response: HttpResponse<string>) => {
@@ -212,7 +203,6 @@ export class ResourceService {
         const uri = entity._links.self.href;
         const payload = ResourceHelper.resolveRelations(entity);
         const observable = this.resourceClientService.putResource(uri, payload, {
-            headers: ResourceHelper.headers,
             observe: 'response'
         });
         return observable.pipe(map((response: HttpResponse<string>) => {
@@ -230,7 +220,6 @@ export class ResourceService {
         const uri = entity._links.self.href;
         const payload = ResourceHelper.resolveRelations(entity, options);
         const observable = this.resourceClientService.patchResource(uri, payload, {
-            headers: ResourceHelper.headers,
             observe: 'response'
         });
         return observable.pipe(map((response: HttpResponse<string>) => {
@@ -246,7 +235,7 @@ export class ResourceService {
     public delete<T extends Resource>(entity: T): Observable<object> {
         CacheHelper.evictEntityLinks(entity);
         const uri = entity._links.self.href;
-        return this.resourceClientService.deleteResource(uri, {headers: ResourceHelper.headers})
+        return this.resourceClientService.deleteResource(uri)
             .pipe(catchError(error => observableThrowError(error)));
     }
 

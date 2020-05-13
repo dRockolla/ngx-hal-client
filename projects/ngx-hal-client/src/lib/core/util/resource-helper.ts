@@ -1,4 +1,3 @@
-import { HttpHeaders } from '@angular/common/http';
 import { BaseResource } from '../model/base-resource';
 import { Include, ResourceOptions } from '../model/common';
 import { isEmbeddedResource } from '../model/defenition';
@@ -9,20 +8,6 @@ import { ObjectUtils } from './object.utils';
 import { EmbeddedResource } from '../model/embedded-resource';
 
 export class ResourceHelper {
-
-    private static _headers: HttpHeaders;
-
-    public static get headers(): HttpHeaders {
-        if (ObjectUtils.isNullOrUndefined(this._headers)) {
-            this._headers = new HttpHeaders();
-        }
-        console.log(this._headers)
-        return this._headers;
-    }
-
-    public static set headers(headers: HttpHeaders) {
-        this._headers = headers;
-    }
 
     static resolveRelations(resource: Resource, options?: Array<ResourceOptions> | Include): object {
         const result: any = {};
