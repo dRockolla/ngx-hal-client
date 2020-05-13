@@ -2,7 +2,7 @@ import { Observable, throwError as observableThrowError } from 'rxjs';
 
 import { catchError, map } from 'rxjs/operators';
 import * as url from 'url';
-import { ResourceHelper } from '../util/resource-helper';
+import { ResourceUtils } from '../util/resource.utils';
 import { ArrayInterface } from './interface/array-interface';
 import { Sort } from './interface/sort';
 import { Resource } from './resource';
@@ -65,7 +65,7 @@ export class ResourceArray<T extends Resource> implements ArrayInterface<T> {
     private init = (type: new() => T, response: any, sortInfo: Sort[]): ResourceArray<T> => {
         const result: ResourceArray<T> = new ResourceArray<T>(this._embedded);
         result.sortInfo = sortInfo;
-        ResourceHelper.instantiateResourceCollection(type, response, result);
+        ResourceUtils.instantiateResourceCollection(type, response, result);
         return result;
     };
 

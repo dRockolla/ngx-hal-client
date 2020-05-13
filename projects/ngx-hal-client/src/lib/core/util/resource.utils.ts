@@ -7,7 +7,7 @@ import { ResourceArray } from '../model/resource-array';
 import { ObjectUtils } from './object.utils';
 import { EmbeddedResource } from '../model/embedded-resource';
 
-export class ResourceHelper {
+export class ResourceUtils {
 
     static resolveRelations(resource: Resource, options?: Array<ResourceOptions> | Include): object {
         const result: any = {};
@@ -103,16 +103,16 @@ export class ResourceHelper {
                 for (let i = 0; i < payload[key].length; i++) {
                     if (isEmbeddedResource(payload[key][i])) {
                         // TODO: check that it's work
-                        payload[key][i] = ResourceHelper.createResource(new EmbeddedResource(), payload[key][i]);
+                        payload[key][i] = ResourceUtils.createResource(new EmbeddedResource(), payload[key][i]);
                     }
                 }
             } else if (isEmbeddedResource(payload[key])) {
                 // TODO: check that it's work
-                payload[key] = ResourceHelper.createResource(new EmbeddedResource(), payload[key]);
+                payload[key] = ResourceUtils.createResource(new EmbeddedResource(), payload[key]);
             }
         }
 
-        return ResourceHelper.createResource(entity, payload);
+        return ResourceUtils.createResource(entity, payload);
     }
 
     private static createResource<T extends BaseResource>(entity: T, payload: any): T {

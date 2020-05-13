@@ -5,7 +5,7 @@ import { catchError, map } from 'rxjs/operators';
 import uriTemplates from 'uri-templates';
 import { CacheHelper } from '../cache/cache.helper';
 import { CustomEncoder } from '../util/custom-encoder';
-import { ResourceHelper } from '../util/resource-helper';
+import { ResourceUtils } from '../util/resource.utils';
 import { HalOptions, LinkOptions } from './common';
 import { SubTypeBuilder } from './interface/subtype-builder';
 import { Resource } from './resource';
@@ -59,12 +59,12 @@ export abstract class BaseResource {
                             const href: string = data._links[embeddedClassName].href;
                             const idx: number = href.lastIndexOf('/');
                             const realClassName = href.replace(this.httpConfig.rootUri, '').substring(0, idx);
-                            result = ResourceHelper.searchSubtypes(builder, realClassName, result);
+                            result = ResourceUtils.searchSubtypes(builder, realClassName, result);
                             break;
                         }
                     }
                 }
-                const resource: T = ResourceHelper.instantiateResource(result, data);
+                const resource: T = ResourceUtils.instantiateResource(result, data);
                 CacheHelper.put(this.getRelationLinkHref(relation), resource, expireMs);
                 return resource;
             }));
@@ -89,7 +89,7 @@ export abstract class BaseResource {
         return this.resourceClientService.getResource(uri)
             .pipe(
                 map(data => {
-                    const filledResource: T = ResourceHelper.instantiateResource(result, data);
+                    const filledResource: T = ResourceUtils.instantiateResource(result, data);
                     CacheHelper.put(uri, filledResource, expireMs);
                     return filledResource;
                 }),
@@ -120,7 +120,7 @@ export abstract class BaseResource {
                     params: httpParams
                 })
                 .pipe(
-                    map(response => ResourceHelper.instantiateResourceCollection<T>(type, response, result, builder)),
+                    map(response => ResourceUtils.instantiateResourceCollection<T>(type, response, result, builder)),
                     catchError(error => observableThrowError(error))
                 )
                 .pipe(map((array: ResourceArray<T>) => {
@@ -145,7 +145,7 @@ export abstract class BaseResource {
         }
         return this.resourceClientService.getResource(uri)
             .pipe(
-                map(response => ResourceHelper.instantiateResourceCollection<T>(type, response, result)),
+                map(response => ResourceUtils.instantiateResourceCollection<T>(type, response, result)),
                 map((array: ResourceArray<T>) => {
                     CacheHelper.putArray(uri, array.result, expireMs);
                     return array.result;
@@ -168,7 +168,7 @@ export abstract class BaseResource {
 
                 return this.resourceClientService.postResource(url, body)
                     .pipe(
-                        map(data => ResourceHelper.instantiateResource(ObjectUtils.clone(this), data))
+                        map(data => ResourceUtils.instantiateResource(ObjectUtils.clone(this), data))
                     );
             }
 
@@ -180,14 +180,14 @@ export abstract class BaseResource {
                     params: httpParams
                 })
                 .pipe(
-                    map(data => ResourceHelper.instantiateResource(ObjectUtils.clone(this), data))
+                    map(data => ResourceUtils.instantiateResource(ObjectUtils.clone(this), data))
                 );
         }
         CacheHelper.evictEntityLink(this.getRelationLinkHref(relation));
 
         return this.resourceClientService.postResource(this.getRelationLinkHref(relation), body)
             .pipe(
-                map(data => ResourceHelper.instantiateResource(ObjectUtils.clone(this), data))
+                map(data => ResourceUtils.instantiateResource(ObjectUtils.clone(this), data))
             );
     }
 
@@ -206,7 +206,7 @@ export abstract class BaseResource {
 
                 return this.resourceClientService.patchResource(url, body)
                     .pipe(
-                        map(data => ResourceHelper.instantiateResource(ObjectUtils.clone(this), data))
+                        map(data => ResourceUtils.instantiateResource(ObjectUtils.clone(this), data))
                     );
             }
 
@@ -218,13 +218,13 @@ export abstract class BaseResource {
                     params: httpParams
                 })
                 .pipe(
-                    map(data => ResourceHelper.instantiateResource(ObjectUtils.clone(this), data))
+                    map(data => ResourceUtils.instantiateResource(ObjectUtils.clone(this), data))
                 );
         }
 
         return this.resourceClientService.patchResource(this.getRelationLinkHref(relation), body)
             .pipe(
-                map(data => ResourceHelper.instantiateResource(ObjectUtils.clone(this), data))
+                map(data => ResourceUtils.instantiateResource(ObjectUtils.clone(this), data))
             );
     }
 

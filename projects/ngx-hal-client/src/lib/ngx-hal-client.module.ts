@@ -12,7 +12,7 @@ export { EmbeddedResource } from './core/model/embedded-resource';
 export { ResourceArray } from './core/model/resource-array';
 export { ResourcePage } from './core/model/resource-page';
 export { Sort, SortOrder } from './core/model/interface/sort';
-export { ResourceHelper } from './core/util/resource-helper';
+export { ResourceUtils } from './core/util/resource.utils';
 export { HalConfiguration } from './core/config/hal-configuration.interface';
 export { HalOptions, HalParam, Include } from './core/model/common';
 export { SubTypeBuilder } from './core/model/interface/subtype-builder';

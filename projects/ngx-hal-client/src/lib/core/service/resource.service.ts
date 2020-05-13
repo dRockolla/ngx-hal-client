@@ -11,7 +11,7 @@ import { SubTypeBuilder } from '../model/interface/subtype-builder';
 import { Resource } from '../model/resource';
 import { ResourceArray } from '../model/resource-array';
 import { CustomEncoder } from '../util/custom-encoder';
-import { ResourceHelper } from '../util/resource-helper';
+import { ResourceUtils } from '../util/resource.utils';
 import { HttpConfigService } from './http-config.service';
 import { UrlUtils } from '../util/url.utils';
 import { ResourceClientService } from './resource-client.service';
@@ -37,7 +37,7 @@ export class ResourceService {
             params: httpParams
         });
         return observable.pipe(
-            map(response => ResourceHelper.instantiateResourceCollection(type, response, result, subType)),
+            map(response => ResourceUtils.instantiateResourceCollection(type, response, result, subType)),
             catchError(error => observableThrowError(error)));
     }
 
@@ -49,7 +49,7 @@ export class ResourceService {
         const observable = this.resourceClientService.getResource(uri, {
             params: httpParams
         });
-        return observable.pipe(map(data => ResourceHelper.instantiateResource(result, data)),
+        return observable.pipe(map(data => ResourceUtils.instantiateResource(result, data)),
             catchError(error => observableThrowError(error)));
     }
 
@@ -57,7 +57,7 @@ export class ResourceService {
         const result: T = new type();
 
         const observable = this.resourceClientService.getResource(resourceLink);
-        return observable.pipe(map(data => ResourceHelper.instantiateResource(result, data)),
+        return observable.pipe(map(data => ResourceUtils.instantiateResource(result, data)),
             catchError(error => observableThrowError(error)));
     }
 
@@ -70,7 +70,7 @@ export class ResourceService {
         const observable = this.resourceClientService.getResource(uri, {
             params: httpParams
         });
-        return observable.pipe(map(response => ResourceHelper.instantiateResourceCollection(type, response, result, subType)),
+        return observable.pipe(map(response => ResourceUtils.instantiateResourceCollection(type, response, result, subType)),
             catchError(error => observableThrowError(error)));
     }
 
@@ -82,7 +82,7 @@ export class ResourceService {
         const observable = this.resourceClientService.getResource(uri, {
             params: httpParams
         });
-        return observable.pipe(map(response => ResourceHelper.instantiateResource(result, response)),
+        return observable.pipe(map(response => ResourceUtils.instantiateResource(result, response)),
             catchError(error => observableThrowError(error)));
     }
 
@@ -99,7 +99,7 @@ export class ResourceService {
         const observable = this.resourceClientService.getResource(uri, {
             params: httpParams
         });
-        return observable.pipe(map(response => ResourceHelper.instantiateResourceCollection(type, response, result, subType)),
+        return observable.pipe(map(response => ResourceUtils.instantiateResourceCollection(type, response, result, subType)),
             catchError(error => observableThrowError(error)));
     }
 
@@ -113,7 +113,7 @@ export class ResourceService {
         const observable = this.resourceClientService.postResource(uri, body, {
             params: httpParams
         });
-        return observable.pipe(map(response => ResourceHelper.instantiateResourceCollection(type, response, result, subType)),
+        return observable.pipe(map(response => ResourceUtils.instantiateResourceCollection(type, response, result, subType)),
             catchError(error => observableThrowError(error)));
     }
 
@@ -121,7 +121,7 @@ export class ResourceService {
         const result: T = new type();
 
         const observable = this.resourceClientService.getResource(resourceLink);
-        return observable.pipe(map(data => ResourceHelper.instantiateResource(result, data)),
+        return observable.pipe(map(data => ResourceUtils.instantiateResource(result, data)),
             catchError(error => observableThrowError(error)));
     }
 
@@ -133,7 +133,7 @@ export class ResourceService {
 
         const observable = this.resourceClientService.getResource(resourceLink);
         return observable.pipe(
-            map(response => ResourceHelper.instantiateResourceCollection(type, response, result, builder)),
+            map(response => ResourceUtils.instantiateResourceCollection(type, response, result, builder)),
             catchError(error => observableThrowError(error))
         );
     }
@@ -147,7 +147,7 @@ export class ResourceService {
 
         const observable = this.resourceClientService.getResource(uri);
         return observable.pipe(
-            map(data => ResourceHelper.instantiateResource(result, data)),
+            map(data => ResourceUtils.instantiateResource(result, data)),
             catchError(error => observableThrowError(error))
         );
     }
@@ -161,7 +161,7 @@ export class ResourceService {
         const observable = this.resourceClientService.getResource(uri);
         return observable
             .pipe(
-                map(response => ResourceHelper.instantiateResourceCollection<T>(type, response, result)),
+                map(response => ResourceUtils.instantiateResourceCollection<T>(type, response, result)),
                 catchError(error => observableThrowError(error))
             ).pipe(map((resourceArray: ResourceArray<T>) => {
                 return resourceArray.result;
@@ -183,14 +183,14 @@ export class ResourceService {
 
     public create<T extends Resource>(selfResource: string, entity: T) {
         const uri = this.httpConfig.getURL() + selfResource;
-        const payload = ResourceHelper.resolveRelations(entity);
+        const payload = ResourceUtils.resolveRelations(entity);
 
         const observable = this.resourceClientService.postResource(uri, payload, {
             observe: 'response'
         });
         return observable.pipe(map((response: HttpResponse<string>) => {
             if (response.status >= 200 && response.status <= 207) {
-                return ResourceHelper.instantiateResource(entity, response.body);
+                return ResourceUtils.instantiateResource(entity, response.body);
             } else if (response.status === 500) {
                 const body: any = response.body;
                 return observableThrowError(body.error);
@@ -201,13 +201,13 @@ export class ResourceService {
     public update<T extends Resource>(entity: T) {
         CacheHelper.evictEntityLinks(entity);
         const uri = entity._links.self.href;
-        const payload = ResourceHelper.resolveRelations(entity);
+        const payload = ResourceUtils.resolveRelations(entity);
         const observable = this.resourceClientService.putResource(uri, payload, {
             observe: 'response'
         });
         return observable.pipe(map((response: HttpResponse<string>) => {
             if (response.status >= 200 && response.status <= 207) {
-                return ResourceHelper.instantiateResource(entity, response.body);
+                return ResourceUtils.instantiateResource(entity, response.body);
             } else if (response.status === 500) {
                 const body: any = response.body;
                 return observableThrowError(body.error);
@@ -218,13 +218,13 @@ export class ResourceService {
     public patch<T extends Resource>(entity: T, options?: Array<ResourceOptions> | Include) {
         CacheHelper.evictEntityLinks(entity);
         const uri = entity._links.self.href;
-        const payload = ResourceHelper.resolveRelations(entity, options);
+        const payload = ResourceUtils.resolveRelations(entity, options);
         const observable = this.resourceClientService.patchResource(uri, payload, {
             observe: 'response'
         });
         return observable.pipe(map((response: HttpResponse<string>) => {
             if (response.status >= 200 && response.status <= 207) {
-                return ResourceHelper.instantiateResource(entity, response.body);
+                return ResourceUtils.instantiateResource(entity, response.body);
             } else if (response.status === 500) {
                 const body: any = response.body;
                 return observableThrowError(body.error);
