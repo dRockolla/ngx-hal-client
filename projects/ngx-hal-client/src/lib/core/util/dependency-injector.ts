@@ -8,9 +8,7 @@ export class DependencyInjector {
         return this._injector?.get(type);
     }
 
-
     static set injector(value: Injector) {
-        console.log('Injected')
         this._injector = value;
     }
 }
